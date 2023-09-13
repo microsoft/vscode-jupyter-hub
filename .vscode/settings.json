@@ -1,0 +1,46 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+    "files.exclude": {
+        "out": false, // set this to true to hide the "out" folder with the compiled JS files
+        "obj": true,
+        "bin": true,
+        "**/node_modules": false,
+        ".vscode-test": true,
+        ".vscode test": true,
+        "**/.venv/**": true
+    },
+    "search.exclude": {
+        "out": true, // set this to false to include "out" folder in search results
+        "**/node_modules": true,
+        "coverage": true,
+        "**/.venv/**": true,
+        "languageServer*/**": true,
+        ".vscode-test": true,
+        ".vscode test": true
+    },
+    "[typescript]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascript]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "git.branchProtection": ["main", "release*"],
+    "git.branchProtectionPrompt": "alwaysCommitToNewBranch",
+    "typescript.tsdk": "./node_modules/typescript/lib", // we want to use the TS server from our node_modules folder to control its version
+    "typescript.preferences.quoteStyle": "single",
+    "javascript.preferences.quoteStyle": "single",
+    "typescriptHero.imports.stringQuoteStyle": "'",
+    "prettier.printWidth": 120,
+    "prettier.singleQuote": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true,
+        "source.fixAll.tslint": true
+    },
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "mochaExplorer.files": "./out/test/**/*.unit.test.js",
+    "mochaExplorer.configFile": "./build/.mocha.unittests.js.json",
+    "mochaExplorer.ui": "bdd",
+    "mochaExplorer.nodeArgv": ["--enable-source-maps"]
+}

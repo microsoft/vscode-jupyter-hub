@@ -1,0 +1,50 @@
+{
+    "folders": [
+        {
+            "path": ".",
+            "name": "vscode-jupyter-hub"
+        },
+        {
+            "name": "vscode-jupyter",
+            "path": "../vscode-jupyter"
+        }
+    ],
+    "settings": {
+        "typescript.tsdk": "./node_modules/typescript/lib",
+        "search.exclude": {
+            "**/node_modules/**": true,
+            "**/.vscode test/insider/**": true,
+            "**/.vscode test/stable/**": true,
+            "**/.vscode-test/insider/**": true,
+            "**/.vscode-test/stable/**": true,
+            "**/out/**": true,
+            "**/dist/**": true
+        }
+    },
+    "launch": {
+        "configurations": [
+            // This configuration allows one to debug multiple extensions at a time.
+            // The assumption here is that vscode-notebook-renderers is in the same folder as the python extension.
+            // User is expected to start the compile tasks for both extensions before using this launch config.
+            {
+                "type": "extensionHost",
+                "request": "launch",
+                "name": "Jupyter + Hub Extension",
+                "args": [
+                    "--enable-proposed-api",
+                    "--extensionDevelopmentPath=${workspaceFolder:vscode-jupyter}",
+                    "--extensionDevelopmentPath=${workspaceFolder:vscode-jupyter-hub}"
+                ],
+                "sourceMaps": true,
+                "outFiles": [
+                    "${workspaceFolder:vscode-jupyter}/out/**/*.js",
+                    "!${workspaceFolder:vscode-jupyter}/**/node_modules**/*",
+                    "${workspaceFolder:vscode-jupyter-hub}/dist/**/*.js",
+                    "!${workspaceFolder:vscode-jupyter-hub}/**/node_modules**/*"
+                ],
+                "skipFiles": ["<node_internals>/**"]
+            }
+        ],
+        "compounds": []
+    }
+}

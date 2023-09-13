@@ -1,0 +1,105 @@
+{
+    "version": "2.0.0",
+    "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+    },
+    "tasks": [
+        {
+            "label": "Compile",
+            "type": "npm",
+            "script": "compile",
+            "isBackground": true,
+            "problemMatcher": ["$tsc-watch"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Compile Web Extension",
+            "type": "npm",
+            "script": "compile-web-watch",
+            "isBackground": true,
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$ts-webpack-watch"]
+        },
+        {
+            "label": "Run Unit Tests",
+            "type": "npm",
+            "script": "test:unittests",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        },
+        {
+            "type": "npm",
+            "script": "preTestJediLSP",
+            "problemMatcher": [],
+            "label": "preTestJediLSP"
+        },
+        {
+            "type": "npm",
+            "script": "launchWebExtension",
+            "problemMatcher": [],
+            "label": "Launch Web Extension (Chrome)"
+        },
+        {
+            "type": "shell",
+            "problemMatcher": [],
+            "command": "npm",
+            "args": ["run", "launchWebExtension", "--", "--browser=webkit", "--port=3111"],
+            "label": "Launch Web Extension (Safari)"
+        },
+        {
+            "type": "npm",
+            "script": "lint",
+            "problemMatcher": ["$eslint-stylish"],
+            "label": "npm: lint",
+            "detail": "eslint -c .eslintrc.js --ext .ts src",
+            "group": {
+                "kind": "build"
+            }
+        },
+        {
+            "label": "Start Jupyter Server",
+            "type": "npm",
+            "dependsOn": "compile-web-test",
+            "isBackground": false,
+            "script": "startJupyterServer",
+            "problemMatcher": [],
+            "options": {
+                "env": {
+                    "CI_PYTHON_PATH": "", // Update with path to real python interpereter used for testing.
+                    "EXISTING_JUPYTER_URI": "" // Update with a server that you started yourself to avoid this script doing it
+                }
+            }
+        },
+        {
+            "label": "Start Jupyter Server Task",
+            "command": "echo ${input:terminateJupyterServerTask}",
+            "type": "shell",
+            "problemMatcher": []
+        },
+        {
+            "label": "Stop Jupyter Server",
+            "type": "npm",
+            "script": "stopJupyterServer",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "terminateJupyterServerTask",
+            "type": "command",
+            "command": "workbench.action.tasks.terminate",
+            "args": "terminateAll"
+        }
+    ]
+}
