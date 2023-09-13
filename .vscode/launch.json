@@ -1,0 +1,62 @@
+// A launch configuration that compiles the extension and then opens it inside a new window
+{
+    "version": "0.1.0",
+    "configurations": [
+        {
+            "name": "Extension",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": ["--extensionDevelopmentPath=${workspaceFolder}", "--enable-proposed-api"],
+            "smartStep": true,
+            "sourceMaps": true,
+            "outFiles": ["${workspaceFolder}/dist/**/*", "!${workspaceFolder}/**/node_modules**/*"],
+            "preLaunchTask": "Compile",
+            "skipFiles": ["<node_internals>/**"],
+            "presentation": {
+                "group": "1_extension",
+                "order": 1
+            }
+        },
+        {
+            "name": "Extension (web)",
+            "type": "extensionHost",
+            "debugWebWorkerHost": true,
+            "request": "launch",
+            "args": ["--extensionDevelopmentPath=${workspaceFolder}", "--extensionDevelopmentKind=web"],
+            "outFiles": ["${workspaceFolder}/dist/**/*", "!${workspaceFolder}/**/node_modules**/*"],
+            "preLaunchTask": "Compile Web Extension",
+            "presentation": {
+                "group": "1_extension",
+                "order": 1
+            }
+        },
+        {
+            "name": "Extension (web with daemon compilation)",
+            "type": "extensionHost",
+            "debugWebWorkerHost": true,
+            "request": "launch",
+            "args": ["--extensionDevelopmentPath=${workspaceFolder}", "--extensionDevelopmentKind=web"],
+            "outFiles": ["${workspaceFolder}/dist/**/*", "!${workspaceFolder}/**/node_modules**/*"],
+            "presentation": {
+                "group": "1_extension",
+                "order": 1
+            }
+        },
+        {
+            "name": "Extension (with daemon compilation)",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": ["--extensionDevelopmentPath=${workspaceFolder}", "--enable-proposed-api"],
+            "smartStep": true,
+            "sourceMaps": true,
+            "outFiles": ["${workspaceFolder}/dist/**/*", "!${workspaceFolder}/**/node_modules**/*"],
+            "skipFiles": ["<node_internals>/**"],
+            "presentation": {
+                "group": "1_extension",
+                "order": 1
+            }
+        }
+    ]
+}
