@@ -1,9 +1,4 @@
 on:
-  push:
-    branches:
-      - main
-
-on:
   pull_request:
     branches:
       - main
