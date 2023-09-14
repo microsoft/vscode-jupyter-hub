@@ -16,7 +16,7 @@ import {
 } from '../jupyterHubApi';
 import { noop } from '../common/utils';
 
-export class UserNamePasswordAuthenticator implements IAuthenticator {
+export class NewAuthenticator implements IAuthenticator {
     private readonly logoutUrls: { url: string; headers: Record<string, string> }[] = [];
     constructor(
         private readonly fetch: SimpleFetch,
@@ -39,6 +39,12 @@ export class UserNamePasswordAuthenticator implements IAuthenticator {
         },
         token: CancellationToken
     ): Promise<{ headers: Record<string, string> }> {
+        const isAuthToken = await this.isPasswordAnAuthToken(options, token);
+        if (isAuthToken) {
+            return {
+                headers: this.getAuthTokenHeaders(options.authInfo.password)
+            };
+        }
         const cookieStore = new this.CookieStore();
         await this.getBaseAuthInfo(options, cookieStore, token);
         const jupyterHubUrl = getJupyterUrl(options.baseUrl, options.authInfo.username);
@@ -55,6 +61,12 @@ export class UserNamePasswordAuthenticator implements IAuthenticator {
         },
         token: CancellationToken
     ): Promise<{ headers: Record<string, string> }> {
+        const isAuthToken = await this.isPasswordAnAuthToken(options, token);
+        if (isAuthToken) {
+            return {
+                headers: this.getAuthTokenHeaders(options.authInfo.password)
+            };
+        }
         const cookieStore = new this.CookieStore();
         await this.getBaseAuthInfo(options, cookieStore, token);
         const apiUrl = getHubApiUrl(options.baseUrl);
@@ -89,6 +101,42 @@ export class UserNamePasswordAuthenticator implements IAuthenticator {
             }
         };
     }
+    private getAuthTokenHeaders(token: string): Record<string, string> {
+        return {
+            Connection: 'keep-alive',
+            'Cache-Control': 'no-cache',
+            Authorization: `token ${token}`
+        };
+    }
+    private async isPasswordAnAuthToken(
+        options: {
+            baseUrl: string;
+            authInfo: {
+                username: string;
+                password: string;
+            };
+        },
+        token: CancellationToken
+    ) {
+        const baseUrl = await getJupyterHubBaseUrl(options.baseUrl, this.fetch, token);
+        // Open login page.
+        let location = appendUrlPath(baseUrl, 'api/user');
+        const response = await this.fetch.send(
+            location,
+            {
+                method: 'GET',
+                headers: {
+                    Connection: 'keep-alive',
+                    'Cache-Control': 'no-cache',
+                    Authorization: `token ${options.authInfo.password}`
+                }
+            },
+            token
+        );
+
+        return response.status === 200;
+    }
+
     private async getBaseAuthInfo(
         options: {
             baseUrl: string;

@@ -12,7 +12,7 @@ import { SimpleFetch } from './common/request';
 import { JupyterHubUrlCapture } from './urlCapture';
 import { BaseCookieStore } from './common/cookieStore.base';
 import { ClassType } from './common/types';
-import { UserNamePasswordAuthenticator } from './authenticators/usernamePassword';
+import { NewAuthenticator } from './authenticators/authenticator';
 import { OldUserNamePasswordAuthenticator } from './authenticators/passwordConnect';
 import { IAuthenticator } from './authenticators/types';
 import { getJupyterUrl } from './jupyterHubApi';
@@ -26,7 +26,7 @@ export class JupyterServerIntegration {
     public readonly extensionId: string = 'JVSC_EXTENSION_ID';
     readonly documentation = Uri.parse('https://aka.ms/vscodeJuptyerExtKernelPickerExistingServer');
     private readonly oldAuthenticator: OldUserNamePasswordAuthenticator;
-    private readonly newAuthenticator: UserNamePasswordAuthenticator;
+    private readonly newAuthenticator: NewAuthenticator;
     private readonly disposables: Disposable[] = [];
     private readonly _onDidChangeServers = new EventEmitter<void>();
     public readonly onDidChangeServers = this._onDidChangeServers.event;
@@ -44,7 +44,7 @@ export class JupyterServerIntegration {
     ) {
         this.oldAuthenticator = new OldUserNamePasswordAuthenticator(fetch);
         this.disposables.push(this.oldAuthenticator);
-        this.newAuthenticator = new UserNamePasswordAuthenticator(fetch, CookieStore);
+        this.newAuthenticator = new NewAuthenticator(fetch, CookieStore);
         this.disposables.push(this.newAuthenticator);
 
         const collection = this.jupyterApi.createJupyterServerCollection(

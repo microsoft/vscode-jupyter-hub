@@ -11,12 +11,13 @@ export namespace Localized {
     export const labelOfCommandToEnterUrl = l10n.t('Enter the Url of the running JupyterHub Server...');
     export const placeholderOfInputBoxToEnterUrl = l10n.t('Enter the url of the running JupyterHub Server');
     export const titleOfInputBoxToEnterUrl = l10n.t('Enter the Url of the running JupyterHub Server');
-    export const captureUserNameTitle = 'Enter your user name for the JupyterHub Server';
-    export const captureUserNamePrompt = 'Enter your user name';
-    export const capturePasswordTitle = 'Enter your password for the JupyterHub Server';
-    export const capturePasswordPrompt = 'Enter your password';
+    export const captureUserNameTitle = 'Enter your user name';
+    export const captureUserNamePrompt = 'user name';
+    export const capturePasswordTitle = 'Enter your password or API token';
+    export const captureAPITokenTitle = 'Enter your API token';
+    export const capturePasswordPrompt = 'password or token';
+    export const captureAITokenPrompt = 'token';
     export const usernamePasswordAuthFailure = l10n.t('Invalid username or password.');
-    export const apiTokenAuthFailure = l10n.t('Invalid API Token.');
     export const jupyterSelfCertFail = (errorMessage: string) =>
         l10n.t(
             'The security certificate used by server {0} was not issued by a trusted certificate authority.\r\nThis may indicate an attempt to steal your information.\r\nDo you want to enable the Allow Unauthorized Remote Connection setting for this workspace to allow you to connect?',
@@ -49,15 +50,8 @@ export namespace Localized {
             'Connection failure. Verify the server is running and reachable from a browser. ({0}). \nWhen connecting from vscode.dev Jupyter servers must be started with specific options to connect. \nClick [here](https://aka.ms/vscjremoteweb) for more information.',
             errorMessage
         );
-    export const pickAnOptionForInsecureConnection = l10n.t('Pick an option');
-    export const howWouldYouLikeToConnectToJupyterHubTitle = l10n.t('Authentication');
-    export const howWouldYouLikeToConnectToJupyterHubPlaceholder = l10n.t('Choose an option');
-    export const authMethodUserNamePwd = l10n.t('Username and password');
-    export const authMethodApiToken = l10n.t('API Token');
-    export const enterApiQuickPickTitle = l10n.t('Enter the API Token');
-    export const enterApiQuickPickPlaceholder = l10n.t('API Token');
-    export const enterApiQuickPickEmptyErrorMessage = l10n.t('API Token cannot be empty');
     export const emptyUserNameErrorMessage = l10n.t('Username cannot be empty');
     export const emptyPasswordErrorMessage = l10n.t('Password cannot be empty');
+    export const emptyAPITokenErrorMessage = l10n.t('API token cannot be empty');
     export const authMethodApiTokenMoreInfoTooltip = l10n.t('More Info');
 }

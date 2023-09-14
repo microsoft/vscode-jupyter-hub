@@ -8,15 +8,16 @@ import { noop, uuid } from './common/utils';
 import { traceDebug, traceError } from './common/logging';
 import { DisposableStore, dispose } from './common/lifecycle';
 import { JupyterHubConnectionValidator, isSelfCertsError, isSelfCertsExpiredError } from './validator';
-import { WorkflowInputCapture, WorkflowQuickInputCapture } from './common/inputCapture';
+import { WorkflowInputCapture } from './common/inputCapture';
 import { JupyterHubServerStorage } from './storage';
 import { SimpleFetch } from './common/request';
 import { BaseCookieStore } from './common/cookieStore.base';
 import { ClassType } from './common/types';
 import { AuthenticationNotSupportedError, IAuthenticator } from './authenticators/types';
 import { OldUserNamePasswordAuthenticator } from './authenticators/passwordConnect';
-import { UserNamePasswordAuthenticator } from './authenticators/usernamePassword';
+import { NewAuthenticator } from './authenticators/authenticator';
 import { extractUserNameFromUrl, getJupyterHubBaseUrl } from './jupyterHubApi';
+import { isWebExtension } from './utils';
 
 class AuthenticationError extends Error {
     constructor(public readonly ex: Error) {
@@ -27,16 +28,15 @@ export class JupyterHubUrlCapture {
     private readonly jupyterConnection: JupyterHubConnectionValidator;
     private readonly displayNamesOfHandles = new Map<string, string>();
     private readonly oldAuthenticator: OldUserNamePasswordAuthenticator;
-    private readonly newAuthenticator: UserNamePasswordAuthenticator;
+    private readonly newAuthenticator: NewAuthenticator;
     private readonly disposable = new DisposableStore();
     constructor(
         private readonly fetch: SimpleFetch,
-        private readonly isWebExtension: boolean,
         private readonly storage: JupyterHubServerStorage,
         CookieStore: ClassType<BaseCookieStore>
     ) {
         this.oldAuthenticator = this.disposable.add(new OldUserNamePasswordAuthenticator(fetch));
-        this.newAuthenticator = this.disposable.add(new UserNamePasswordAuthenticator(fetch, CookieStore));
+        this.newAuthenticator = this.disposable.add(new NewAuthenticator(fetch, CookieStore));
         this.jupyterConnection = new JupyterHubConnectionValidator(fetch);
     }
     dispose() {
@@ -104,7 +104,7 @@ export class JupyterHubUrlCapture {
                                 (url: string) => `[${url}](${url})`
                             );
                             validationErrorMessage = (
-                                this.isWebExtension
+                                isWebExtension()
                                     ? Localized.remoteJupyterConnectionFailedWithoutServerWithErrorWeb
                                     : Localized.remoteJupyterConnectionFailedWithoutServerWithError
                             )(errorMessage);
@@ -137,11 +137,9 @@ export class JupyterHubUrlCapture {
         token: CancellationToken
     ): Promise<JupyterServer | undefined> {
         const steps: MultiStep<Step, State>[] = [
-            new GetUrlStep(this.fetch, this.isWebExtension),
-            new CheckAuthMethod(),
+            new GetUrlStep(this.fetch),
             new GetUserName(),
             new GetPassword(),
-            new GetApiToken(),
             new GetHeadersAndCookies(authenticator),
             new VerifyConnection(this.jupyterConnection, authenticator),
             new GetDisplayName(this.storage)
@@ -149,7 +147,7 @@ export class JupyterHubUrlCapture {
         const disposables = new DisposableStore();
         let nextStep: Step | undefined = 'Get Url';
         const state: State = {
-            auth: { username: '', password: '', token: '' },
+            auth: { username: '', password: '' },
             baseUrl: '',
             urlWasPrePopulated: false,
             url,
@@ -164,7 +162,7 @@ export class JupyterHubUrlCapture {
                 try {
                     state.baseUrl = await getJupyterHubBaseUrl(url, this.fetch, token);
                     state.urlWasPrePopulated = true;
-                    nextStep = reasonForCapture === 'captureNewUrl' ? 'Check Auth Method' : 'Get Url';
+                    nextStep = reasonForCapture === 'captureNewUrl' ? 'Get Username' : 'Get Url';
                 } catch {
                     validationErrorMessage = Localized.invalidJupyterHubUrl;
                 }
@@ -196,8 +194,7 @@ export class JupyterHubUrlCapture {
                         },
                         {
                             username: state.auth.username,
-                            password: state.auth.password,
-                            token: state.auth.token || ''
+                            password: state.auth.password
                         }
                     );
                     return {
@@ -237,10 +234,8 @@ export class JupyterHubUrlCapture {
 type Step =
     | 'Before'
     | 'Get Url'
-    | 'Check Auth Method'
     | 'Get Username'
     | 'Get Password'
-    | 'Get API Token'
     | 'Get Authentication Headers and Cookies'
     | 'Verify Connection'
     | 'Get Display Name'
@@ -260,15 +255,12 @@ type State = {
     url: string;
     displayName: string;
     baseUrl: string;
-    auth: { username: string; password: string; token: string; headers?: Record<string, string> };
+    auth: { username: string; password: string; headers?: Record<string, string> };
 };
 class GetUrlStep extends DisposableStore implements MultiStep<Step, State> {
     step: Step = 'Get Url';
     canNavigateBackToThis = true;
-    constructor(
-        private readonly fetch: SimpleFetch,
-        private readonly isWebExtension: boolean
-    ) {
+    constructor(private readonly fetch: SimpleFetch) {
         super();
     }
     async run(state: State, token: CancellationToken) {
@@ -276,7 +268,7 @@ class GetUrlStep extends DisposableStore implements MultiStep<Step, State> {
             try {
                 // In web trying to read clipboard can be iffy, as users may get a prompt to allow that.
                 // And that UX isn't great. So skip this for web.
-                const text = this.isWebExtension ? '' : await env.clipboard.readText();
+                const text = isWebExtension() ? '' : await env.clipboard.readText();
                 const parsedUri = new URL(text.trim());
                 // Only display http/https uris.
                 state.url = text && parsedUri && parsedUri.protocol.toLowerCase().startsWith('http') ? text : '';
@@ -314,7 +306,7 @@ class GetUrlStep extends DisposableStore implements MultiStep<Step, State> {
         state.url = url;
         state.baseUrl = await getJupyterHubBaseUrl(url, this.fetch, token);
         state.auth.username = state.auth.username || extractUserNameFromUrl(url) || '';
-        return 'Check Auth Method';
+        return 'Get Username';
     }
 }
 class GetUserName extends DisposableStore implements MultiStep<Step, State> {
@@ -337,7 +329,6 @@ class GetUserName extends DisposableStore implements MultiStep<Step, State> {
             return;
         }
         state.auth.username = username;
-        state.auth.token = '';
         return 'Get Password';
     }
 }
@@ -345,12 +336,30 @@ class GetPassword extends DisposableStore implements MultiStep<Step, State> {
     step: Step = 'Get Password';
     canNavigateBackToThis = true;
     async run(state: State, token: CancellationToken): Promise<Step | undefined> {
-        const password = await this.add(new WorkflowInputCapture()).getValue(
+        // In vscode.dev or the like, username/password auth doesn't work
+        // as JupyterHub doesn't support CORS. So we need to use API tokens.
+        const input = this.add(new WorkflowInputCapture());
+        const moreInfo: QuickInputButton = {
+            iconPath: new ThemeIcon('info'),
+            tooltip: Localized.authMethodApiTokenMoreInfoTooltip
+        };
+        const password = await input.getValue(
             {
-                title: Localized.capturePasswordTitle,
-                placeholder: Localized.capturePasswordPrompt,
+                title: isWebExtension() ? Localized.captureAPITokenTitle : Localized.capturePasswordTitle,
+                placeholder: isWebExtension() ? Localized.captureAITokenPrompt : Localized.capturePasswordPrompt,
                 password: true,
-                validateInput: async (value) => (value ? undefined : Localized.emptyPasswordErrorMessage)
+                buttons: [moreInfo],
+                onDidTriggerButton: (e) => {
+                    if (e === moreInfo) {
+                        env.openExternal(Uri.parse('https://aka.ms/vscjremoteweb')).then(noop, noop);
+                    }
+                },
+                validateInput: async (value) =>
+                    value
+                        ? undefined
+                        : isWebExtension()
+                        ? Localized.emptyAPITokenErrorMessage
+                        : Localized.emptyPasswordErrorMessage
             },
             token
         );
@@ -358,69 +367,7 @@ class GetPassword extends DisposableStore implements MultiStep<Step, State> {
             return;
         }
         state.auth.password = password;
-        state.auth.token = '';
         return 'Get Authentication Headers and Cookies';
-    }
-}
-class GetApiToken extends DisposableStore implements MultiStep<Step, State> {
-    step: Step = 'Get API Token';
-    canNavigateBackToThis = true;
-    async run(state: State, token: CancellationToken) {
-        const errorMessage = state.errorMessage;
-        state.errorMessage = ''; // Never display this validation message again.
-        const authToken = await this.add(new WorkflowInputCapture()).getValue(
-            {
-                title: Localized.enterApiQuickPickTitle,
-                placeholder: Localized.enterApiQuickPickPlaceholder,
-                password: true,
-                validationMessage: errorMessage,
-                validateInput: async (value) => (value ? undefined : Localized.enterApiQuickPickEmptyErrorMessage)
-            },
-            token
-        );
-        if (!authToken) {
-            return;
-        }
-        state.auth.username = '';
-        state.auth.password = '';
-        state.auth.token = authToken;
-        return 'Get Authentication Headers and Cookies';
-    }
-}
-class CheckAuthMethod extends DisposableStore implements MultiStep<Step, State> {
-    step: Step = 'Check Auth Method';
-    canNavigateBackToThis = true;
-    async run(_state: State, token: CancellationToken): Promise<Step | undefined> {
-        const authMethod = this.add(new WorkflowQuickInputCapture());
-        const moreInfoButton: QuickInputButton = {
-            iconPath: new ThemeIcon('info'),
-            tooltip: Localized.authMethodApiTokenMoreInfoTooltip
-        };
-        this.add(
-            authMethod.onDidTriggerItemButton((e) => {
-                if (e.button === moreInfoButton) {
-                    env.openExternal(Uri.parse('http://www.google.com')).then(noop, noop);
-                }
-            }, undefined)
-        );
-        const result = await authMethod.getValue(
-            {
-                title: Localized.howWouldYouLikeToConnectToJupyterHubTitle,
-                placeholder: Localized.howWouldYouLikeToConnectToJupyterHubPlaceholder,
-                items: [
-                    { label: Localized.authMethodUserNamePwd },
-                    {
-                        label: Localized.authMethodApiToken,
-                        buttons: [moreInfoButton]
-                    }
-                ]
-            },
-            token
-        );
-        if (!result) {
-            return;
-        }
-        return result.label === Localized.authMethodUserNamePwd ? 'Get Username' : 'Get API Token';
     }
 }
 
@@ -446,7 +393,6 @@ class GetHeadersAndCookies extends DisposableStore implements MultiStep<Step, St
             }
 
             state.auth.headers = result.headers;
-            state.auth.token = result.token || state.auth.token;
         } catch (err) {
             traceError('Failed to get Auth Info', err);
             if (err instanceof AuthenticationNotSupportedError) {
@@ -490,10 +436,8 @@ class VerifyConnection extends DisposableStore implements MultiStep<Step, State>
                 state.errorMessage = Localized.jupyterSelfCertExpiredErrorMessageOnly;
                 return 'Get Url';
             } else {
-                state.errorMessage = state.auth.username
-                    ? Localized.usernamePasswordAuthFailure
-                    : Localized.apiTokenAuthFailure;
-                return state.auth.username ? 'Get Username' : 'Get API Token';
+                state.errorMessage = Localized.usernamePasswordAuthFailure;
+                return 'Get Username';
             }
         }
         return 'Get Display Name';

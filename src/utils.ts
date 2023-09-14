@@ -4,3 +4,11 @@
 export function appendUrlPath(baseUrl: string, path: string) {
     return new URL(path, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString();
 }
+
+let isWebExt = false;
+export function setIsWebExtension() {
+    isWebExt = true;
+}
+export function isWebExtension() {
+    return isWebExt;
+}
