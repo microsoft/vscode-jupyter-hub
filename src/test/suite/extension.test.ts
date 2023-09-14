@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 import { assert, expect } from 'chai';
-import * as os from 'os';
 import { NewAuthenticator } from '../../authenticators/authenticator';
 import { CancellationTokenSource, Uri, workspace } from 'vscode';
 import { DisposableStore, IDisposable } from '../../common/lifecycle';
@@ -21,11 +20,10 @@ const TIMEOUT = 30_000; // Spinning up jupyter servers could take a while.
 describe('Authentication', function () {
     let baseUrl = 'http://localhost:8000';
     let hubToken = '';
-    // const anotherUserName = 'joe'; // Defined in config file.
+    let username = '';
     let cancellationToken: CancellationTokenSource;
     const disposables: IDisposable[] = [];
     this.timeout(TIMEOUT);
-    const username = os.userInfo().username;
     let RequestCreator: ClassType<IJupyterRequestCreator>;
     let CookieStore: ClassType<BaseCookieStore>;
     let disposableStore: DisposableStore;
@@ -43,8 +41,9 @@ describe('Authentication', function () {
         activateHubExtension().catch(noop);
         cancellationToken = new CancellationTokenSource();
         disposables.push(cancellationToken);
-        const { url, token } = JSON.parse(Buffer.from(await workspace.fs.readFile(file)).toString());
+        const { url, token, username: user } = JSON.parse(Buffer.from(await workspace.fs.readFile(file)).toString());
         baseUrl = url;
+        username = user;
         hubToken = token;
         assert.ok(baseUrl, 'No JupyterHub url');
         assert.ok(hubToken, 'No JupyterHub token');

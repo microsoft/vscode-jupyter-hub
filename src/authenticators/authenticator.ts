@@ -124,6 +124,9 @@ export class NewAuthenticator implements IAuthenticator {
         token: CancellationToken
     ) {
         const baseUrl = await getJupyterHubBaseUrl(options.baseUrl, this.fetch, token);
+        if (isWebExtension()) {
+            return true;
+        }
         // Open login page.
         let location = appendUrlPath(baseUrl, 'api/user');
         const response = await this.fetch.send(

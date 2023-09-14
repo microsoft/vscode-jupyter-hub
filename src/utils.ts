@@ -10,5 +10,6 @@ export function setIsWebExtension() {
     isWebExt = true;
 }
 export function isWebExtension() {
-    return isWebExt;
+    return true || isWebExt;
+    // return isWebExt;
 }

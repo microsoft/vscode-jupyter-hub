@@ -12,7 +12,7 @@ import {
     window
 } from 'vscode';
 import { raceCancellationError, raceTimeout, sleep } from './common/async';
-import { traceDebug, traceError } from './common/logging';
+import { traceError } from './common/logging';
 import { DisposableStore, dispose } from './common/lifecycle';
 import { IJupyterHubConnectionValidator } from './types';
 import { workspace } from 'vscode';
@@ -20,7 +20,6 @@ import { Localized } from './common/localize';
 import { SimpleFetch } from './common/request';
 import { JupyterHubApi, createServerConnectSettings, getHubApiUrl } from './jupyterHubApi';
 import { IAuthenticator } from './authenticators/types';
-import { StopWatch } from './common/stopwatch';
 import { ISpecModels } from '@jupyterlab/services/lib/kernelspec/restapi';
 
 const TIMEOUT_FOR_SESSION_MANAGER_READY = 10_000;
@@ -48,21 +47,22 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
                 const token = masterCancel.token;
                 disposable.add(mainCancel.onCancellationRequested(() => masterCancel.cancel()));
                 disposable.add(progressCancel.onCancellationRequested(() => masterCancel.cancel()));
+                console.log(this.startIfServerNotStarted.length);
                 try {
                     // Check if the server is running.
-                    const didStartServer = await this.startIfServerNotStarted(
-                        baseUrl,
-                        authInfo,
-                        authenticator,
-                        token
-                    ).catch((ex) => traceError(`Failed to start server`, ex));
-                    const started = new StopWatch();
+                    // const didStartServer = await this.startIfServerNotStarted(
+                    //     baseUrl,
+                    //     authInfo,
+                    //     authenticator,
+                    //     token
+                    // ).catch((ex) => traceError(`Failed to start server`, ex));
+                    // const started = new StopWatch();
                     // Get the auth information again, as the previously held auth information does not seem to work when starting a jupyter server
                     const jupyterAuth = await authenticator.getJupyterAuthInfo({ baseUrl, authInfo }, token);
                     if (!jupyterAuth) {
                         throw new Error('Failed to get Jupyter Auth Info');
                     }
-                    let retries = 0;
+                    // let retries = 0;
                     while (true) {
                         // Attempt to list the running kernels. It will return empty if there are none, but will
                         // throw if can't connect.
@@ -77,20 +77,20 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
                         }
                         // If we started the Jupyter server, give it time to completely start up.
                         // Theres a delay in APIs responding to requests.
-                        if (didStartServer == 'didStartServer') {
-                            // Wait for the server to start.
-                            await sleep(1000, token);
-                            if (retries > 0 && started.elapsed > TIMEOUT_FOR_SESSION_MANAGER_READY) {
-                                throw new Error('Failed to enumeration kernel Specs');
-                            } else {
-                                // Retry at least once before we give up.
-                                retries += 1;
-                                traceDebug(`Waiting for Jupyter Server to start ${baseUrl}`);
-                                continue;
-                            }
-                        } else {
-                            throw new Error('Failed to enumeration kernel Specs');
-                        }
+                        // if (didStartServer == 'didStartServer') {
+                        //     // Wait for the server to start.
+                        //     await sleep(1000, token);
+                        //     if (retries > 0 && started.elapsed > TIMEOUT_FOR_SESSION_MANAGER_READY) {
+                        //         throw new Error('Failed to enumeration kernel Specs');
+                        //     } else {
+                        //         // Retry at least once before we give up.
+                        //         retries += 1;
+                        //         traceDebug(`Waiting for Jupyter Server to start ${baseUrl}`);
+                        //         continue;
+                        //     }
+                        // } else {
+                        //     throw new Error('Failed to enumeration kernel Specs');
+                        // }
                     }
                 } catch (err) {
                     if (isSelfCertsError(err)) {
@@ -190,6 +190,7 @@ export async function getKernelSpecs(
     });
     const disposables: Disposable[] = [];
     try {
+        console.error('Getting Kernle Specs for LabServices');
         const hasKernelSpecs = () => specsManager.specs && Object.keys(specsManager.specs.kernelspecs).length > 0;
         // Fetch the list the session manager already knows about. Refreshing may not work or could be very slow.
         if (hasKernelSpecs()) {
@@ -240,6 +241,7 @@ export async function getKernelSpecs(
         );
         return;
     } catch (e) {
+        console.error('Failed Getting Kernle Specs for LabServices', e);
         if (!(e instanceof CancellationError)) {
             traceError(`SessionManager:getKernelSpecs failure: `, e);
         }

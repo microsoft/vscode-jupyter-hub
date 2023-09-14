@@ -8,6 +8,7 @@ import { ServerConnection } from '@jupyterlab/services';
 import { traceError } from './common/logging';
 import { appendUrlPath } from './utils';
 import { noop } from './common/utils';
+import { sleep } from './common/async';
 
 export class JupyterHubApi {
     constructor(
@@ -73,21 +74,28 @@ export class JupyterHubApi {
 export async function getVersion(url: string, fetch: SimpleFetch, token: CancellationToken): Promise<string> {
     // Otherwise request hub/api. This should return the json with the hub version
     // if this is a hub url
-    const response = await fetch.send(
-        appendUrlPath(url, 'hub/api'),
-        {
-            method: 'get',
-            redirect: 'manual',
-            headers: { Connection: 'keep-alive' }
-        },
-        token
-    );
-
-    if (response.status === 200) {
-        const { version }: { version: string } = await response.json();
-        return version;
+    try {
+        const response = await fetch.send(
+            appendUrlPath(url, 'hub/api'),
+            {
+                method: 'get',
+                redirect: 'manual',
+                headers: { Connection: 'keep-alive' }
+            },
+            token
+        );
+        console.error('Failed to get Response', response);
+        await sleep(30_000);
+        if (response.status === 200) {
+            const { version }: { version: string } = await response.json();
+            return version;
+        }
+        throw new Error(`Invalid Jupyter Hub Url ${url} (failed to get version).`);
+    } catch (ex) {
+        console.error('Failed to get Response, ex', ex);
+        await sleep(30_000);
+        throw ex;
     }
-    throw new Error(`Invalid Jupyter Hub Url ${url} (failed to get version).`);
 }
 
 export function createServerConnectSettings(

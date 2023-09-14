@@ -29,6 +29,7 @@ export class JupyterRequestCreator implements IJupyterRequestCreator {
                         }
                     };
                 }
+                console.error('AuthorizingRequest', origHeaders);
             }
         }
 
