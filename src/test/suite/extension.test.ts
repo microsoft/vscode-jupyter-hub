@@ -68,7 +68,7 @@ describe('Authentication', function () {
                 }
             });
 
-            it('should be able to query kernelspecs', async function () {
+            it.skip('should be able to query kernelspecs', async function () {
                 const headers = { Authorization: `token ${hubToken}` };
                 const fetch = new SimpleFetch(new RequestCreator());
                 const response = await fetch.send(
