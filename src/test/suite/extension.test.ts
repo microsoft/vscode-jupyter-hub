@@ -16,12 +16,12 @@ import { IJupyterRequestCreator } from '../../types';
 import { createServerConnectSettings } from '../../jupyterHubApi';
 import { KernelManager, SessionManager } from '@jupyterlab/services';
 
+const TIMEOUT = 30_000; // Spinning up jupyter servers could take a while.
 describe('Authentication', function () {
     let baseUrl = 'http://localhost:8000';
     let hubToken = '';
-    const anotherUserName = 'joe'; // Defined in config file.
     let cancellationToken: CancellationTokenSource;
-    this.timeout(100_000);
+    this.timeout(TIMEOUT);
     let RequestCreator: ClassType<IJupyterRequestCreator>;
     let CookieStore: ClassType<BaseCookieStore>;
     const username = os.userInfo().username;
@@ -30,7 +30,7 @@ describe('Authentication', function () {
     let fetch: SimpleFetch;
     let requestCreator: IJupyterRequestCreator;
     before(async function () {
-        this.timeout(100_000);
+        this.timeout(TIMEOUT);
         cancellationToken = new CancellationTokenSource();
         const file = Uri.joinPath(workspace.workspaceFolders![0].uri, 'jupyterhub.json');
         const promise = activateHubExtension().then((classes) => {
