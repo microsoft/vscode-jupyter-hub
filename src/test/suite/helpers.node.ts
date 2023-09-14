@@ -13,7 +13,10 @@ export async function startJupterHub(): Promise<{ dispose: () => void }> {
     setupTempDir();
     const token = await generateJupyberHubToken();
     const url = 'http://localhost:8000';
-    fs.writeFileSync(path.join(TEMP_DIR, 'jupyterhub.json'), JSON.stringify({ url, token }));
+    fs.writeFileSync(
+        path.join(TEMP_DIR, 'jupyterhub.json'),
+        JSON.stringify({ url, token, username: os.userInfo().username })
+    );
     return spawnJupyterHub();
 }
 
