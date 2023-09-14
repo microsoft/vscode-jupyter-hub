@@ -4,6 +4,7 @@
     "version": "2023.9.100",
     "description": "Support for connecting to Jupyter Hub in VS Code along with the Jupyter Extension",
     "publisher": "ms-toolsai",
+    "preview": true,
     "author": {
         "name": "Microsoft Corporation"
     },
@@ -75,7 +76,7 @@
         "esbuild-release": "npm run esbuild-base-node && npm run esbuild-base-web",
         "esbuild-node-watch": "npm run esbuild-base-node -- --sourcemap --watch",
         "esbuild-web-watch": "npm run esbuild-base-web -- --sourcemap --watch",
-        "test-compile": "tsc -p ./ --watch",
+        "test-compile": "tsc -p ./",
         "test": "node ./out/test/runTest.js"
     },
     "dependencies": {
