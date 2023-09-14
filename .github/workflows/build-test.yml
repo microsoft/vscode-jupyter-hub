@@ -69,6 +69,7 @@ jobs:
       run: npm i -g npm@${{env.NPM_VERSION}}
     - run: npm i -g @vscode/vsce
     - run: npm ci
+    - run: npm run test-compile
     - run: xvfb-run -a npm test
       if: runner.os == 'Linux'
     - run: npm test
