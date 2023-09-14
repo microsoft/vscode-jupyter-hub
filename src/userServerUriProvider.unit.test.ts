@@ -1,5 +1,5 @@
-// // Copyright (c) Microsoft Corporation.
-// // Licensed under the MIT License.
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 // import * as sinon from 'sinon';
 // import { anything, instance, mock, verify, when } from 'ts-mockito';
