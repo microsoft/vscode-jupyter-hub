@@ -5,36 +5,40 @@ import * as os from 'os';
 import { assert, expect } from 'chai';
 import { NewAuthenticator } from '../../authenticators/authenticator';
 import { CancellationTokenSource, Uri, workspace } from 'vscode';
-import { IDisposable } from '../../common/lifecycle';
+import { DisposableStore } from '../../common/lifecycle';
 import { activateHubExtension } from './helpers';
 import { noop } from '../../common/utils';
 import { SimpleFetch } from '../../common/request';
-import { JupyterHubConnectionValidator } from '../../validator';
+import { JupyterHubConnectionValidator, canGetKernelSpecs } from '../../validator';
 import { ClassType } from '../../common/types';
 import { BaseCookieStore } from '../../common/cookieStore.base';
 import { IJupyterRequestCreator } from '../../types';
+import { createServerConnectSettings } from '../../jupyterHubApi';
+import { KernelManager, SessionManager } from '@jupyterlab/services';
 
 describe('Authentication', function () {
     let baseUrl = 'http://localhost:8000';
     let hubToken = '';
-    // const anotherUserName = 'joe'; // Defined in config file.
+    const anotherUserName = 'joe'; // Defined in config file.
     let cancellationToken: CancellationTokenSource;
-    const disposables: IDisposable[] = [];
     this.timeout(100_000);
     let RequestCreator: ClassType<IJupyterRequestCreator>;
     let CookieStore: ClassType<BaseCookieStore>;
     const username = os.userInfo().username;
+    let disposableStore: DisposableStore;
+    let authenticator: NewAuthenticator;
+    let fetch: SimpleFetch;
+    let requestCreator: IJupyterRequestCreator;
     before(async function () {
         this.timeout(100_000);
+        cancellationToken = new CancellationTokenSource();
         const file = Uri.joinPath(workspace.workspaceFolders![0].uri, 'jupyterhub.json');
         const promise = activateHubExtension().then((classes) => {
-            RequestCreator = classes!.RequestCreator;
-            CookieStore = classes!.CookieStore;
+            RequestCreator = classes.RequestCreator;
+            CookieStore = classes.CookieStore;
         });
 
         activateHubExtension().catch(noop);
-        cancellationToken = new CancellationTokenSource();
-        disposables.push(cancellationToken);
         const { url, token } = JSON.parse(Buffer.from(await workspace.fs.readFile(file)).toString());
         baseUrl = url;
         hubToken = token;
@@ -42,19 +46,20 @@ describe('Authentication', function () {
         assert.ok(hubToken, 'No JupyterHub token');
         await promise;
     });
+    beforeEach(() => {
+        disposableStore = new DisposableStore();
+        requestCreator = new RequestCreator();
+        fetch = new SimpleFetch(requestCreator);
+        authenticator = disposableStore.add(new NewAuthenticator(fetch, CookieStore));
+    });
+    afterEach(() => disposableStore.dispose());
 
-    // [
-    //     { title: 'logged in user', username: os.userInfo().username },
-    //     { title: 'another user (joe)', username: anotherUserName }
-    // ].forEach(({ title, username }) => {
-    //     describe(title, function () {
     [
         { title: 'password', password: () => 'pwd', isApiToken: false },
         { title: 'token', password: () => hubToken, isApiToken: true }
     ].forEach(({ title, password, isApiToken }) => {
         describe(title, function () {
             it('should get Hub auth info', async () => {
-                const authenticator = new NewAuthenticator(new SimpleFetch(new RequestCreator()), CookieStore);
                 const { headers } = await authenticator.getHubApiAuthInfo(
                     { baseUrl, authInfo: { username, password: password() } },
                     cancellationToken.token
@@ -70,7 +75,6 @@ describe('Authentication', function () {
                 }
             });
             it('should get Jupyter auth info', async () => {
-                const authenticator = new NewAuthenticator(new SimpleFetch(new RequestCreator()), CookieStore);
                 const { headers } = await authenticator.getJupyterAuthInfo(
                     { baseUrl, authInfo: { username, password: password() } },
                     cancellationToken.token
@@ -86,14 +90,43 @@ describe('Authentication', function () {
                 }
             });
             it('should pass validation', async function () {
-                const authenticator = new NewAuthenticator(new SimpleFetch(new RequestCreator()), CookieStore);
-                const validator = new JupyterHubConnectionValidator(new SimpleFetch(new RequestCreator()));
+                const validator = new JupyterHubConnectionValidator(fetch);
                 await validator.validateJupyterUri(
                     baseUrl,
                     { username, password: password() },
                     authenticator,
                     cancellationToken.token
                 );
+            });
+            it('should be able to start a session', async function () {
+                // Found while dev that even though we get the cookies/headers and the like
+                // Some paths in the app like retrieving kernel specs/sessions can be succesful,
+                // However if we try to start a session, it fails. This is because the cookies that we extracted was not correct.
+                const { headers } = await authenticator.getJupyterAuthInfo(
+                    { baseUrl, authInfo: { username, password: password() } },
+                    cancellationToken.token
+                );
+                const serverSettings = createServerConnectSettings(
+                    baseUrl,
+                    { username: username, headers },
+                    requestCreator
+                );
+                const kernelSpecs = await canGetKernelSpecs(serverSettings, cancellationToken.token);
+                if (!kernelSpecs) {
+                    throw new Error('No kernel specs');
+                }
+                const kernelManager = disposableStore.add(new KernelManager({ serverSettings }));
+                await kernelManager.ready;
+
+                const sessionManager = disposableStore.add(new SessionManager({ serverSettings, kernelManager }));
+                await sessionManager.ready;
+                const session = await sessionManager.startNew({
+                    name: kernelSpecs.default,
+                    path: 'one.ipynb',
+                    type: 'notebook'
+                });
+                expect(session.model.kernel?.name).to.be.equal(kernelSpecs.default);
+                await Promise.all([session.shutdown(), kernelManager.shutdownAll()]);
             });
         });
     });

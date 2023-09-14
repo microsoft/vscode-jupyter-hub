@@ -21,6 +21,7 @@ import { SimpleFetch } from './common/request';
 import { JupyterHubApi, createServerConnectSettings, getHubApiUrl } from './jupyterHubApi';
 import { IAuthenticator } from './authenticators/types';
 import { StopWatch } from './common/stopwatch';
+import { ISpecModels } from '@jupyterlab/services/lib/kernelspec/restapi';
 
 const TIMEOUT_FOR_SESSION_MANAGER_READY = 10_000;
 
@@ -177,10 +178,10 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
     }
 }
 
-async function canGetKernelSpecs(
+export async function canGetKernelSpecs(
     serverSettings: ServerConnection.ISettings,
     token: CancellationToken
-): Promise<boolean> {
+): Promise<ISpecModels | null | undefined> {
     const specsManager = new KernelSpecManager({ serverSettings });
     const kernelManager = new KernelManager({ serverSettings });
     const sessionManager = new SessionManager({
@@ -192,20 +193,20 @@ async function canGetKernelSpecs(
         const hasKernelSpecs = () => specsManager.specs && Object.keys(specsManager.specs.kernelspecs).length > 0;
         // Fetch the list the session manager already knows about. Refreshing may not work or could be very slow.
         if (hasKernelSpecs()) {
-            return true;
+            return specsManager.specs;
         }
 
         // Wait for the session to be ready
         await raceCancellationError(token, raceTimeout(TIMEOUT_FOR_SESSION_MANAGER_READY, sessionManager.ready));
         if (hasKernelSpecs()) {
-            return true;
+            return specsManager.specs;
         }
 
         // Ask the session manager to refresh its list of kernel specs. This might never
         // come back so only wait for ten seconds (learnt this in Jupyter extension).
         await raceCancellationError(token, raceTimeout(TIMEOUT_FOR_SESSION_MANAGER_READY, specsManager.refreshSpecs()));
         if (hasKernelSpecs()) {
-            return true;
+            return specsManager.specs;
         }
 
         // At this point wait for the specs to change
@@ -232,17 +233,18 @@ async function canGetKernelSpecs(
         );
 
         if (hasKernelSpecs()) {
-            return true;
+            console.error(specsManager.specs && Object.keys(specsManager.specs.kernelspecs).length > 0);
+            return specsManager.specs;
         }
         traceError(
             `SessionManager cannot enumerate kernelSpecs. Specs ${JSON.stringify(specsManager.specs?.kernelspecs)}.`
         );
-        return false;
+        return;
     } catch (e) {
         if (!(e instanceof CancellationError)) {
             traceError(`SessionManager:getKernelSpecs failure: `, e);
         }
-        return false;
+        return;
     } finally {
         dispose(disposables);
         try {
