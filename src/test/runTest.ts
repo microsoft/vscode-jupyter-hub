@@ -2,8 +2,8 @@
 // Licensed under the MIT License.
 
 import * as path from 'path';
-
-import { runTests } from '@vscode/test-electron';
+import { spawnSync } from 'child_process';
+import { downloadAndUnzipVSCode, resolveCliPathFromVSCodeExecutablePath, runTests } from '@vscode/test-electron';
 
 async function main() {
     try {
@@ -14,6 +14,13 @@ async function main() {
         // The path to test runner
         // Passed to --extensionTestsPath
         const extensionTestsPath = path.resolve(__dirname, './suite/index');
+        const vscodeExecutablePath = await downloadAndUnzipVSCode('insiders');
+        const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath);
+        console.info(`Installing Jupyter Extension`);
+        spawnSync(cliPath, ['--install-extension', 'ms-toolsai.jupyter', '--disable-telemetry'], {
+            encoding: 'utf-8',
+            stdio: 'inherit'
+        });
 
         // Download VS Code, unzip it and run the integration test
         await runTests({ extensionDevelopmentPath, extensionTestsPath });
