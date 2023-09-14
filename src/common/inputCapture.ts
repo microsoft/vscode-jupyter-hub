@@ -43,13 +43,12 @@ export class WorkflowInputCapture {
             this.disposables.push(input);
             input.ignoreFocusOut = true;
             input.title = options.title;
-            input.buttons = options.buttons || [];
             input.ignoreFocusOut = true;
             input.value = options.value || '';
             input.placeholder = options.placeholder || '';
             input.password = options.password === true;
             input.validationMessage = options.validationMessage || '';
-            input.buttons = [QuickInputButtons.Back];
+            input.buttons = [QuickInputButtons.Back, ...(options.buttons || [])];
             input.show();
             input.onDidChangeValue(() => (input.validationMessage = ''), this, this.disposables);
             input.onDidTriggerButton((e) => options.onDidTriggerButton?.(e), this, this.disposables);
