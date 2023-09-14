@@ -16,6 +16,7 @@ import { createServerConnectSettings } from '../../jupyterHubApi';
 import { KernelManager, SessionManager } from '@jupyterlab/services';
 
 const TIMEOUT = 30_000; // Spinning up jupyter servers could take a while.
+import { isWebExtension } from '../../utils';
 
 describe('Authentication', function () {
     let baseUrl = 'http://localhost:8000';
@@ -62,6 +63,47 @@ describe('Authentication', function () {
         { title: 'token', password: () => hubToken, isApiToken: true }
     ].forEach(({ title, password, isApiToken }) => {
         describe(title, function () {
+            before(function () {
+                if (isWebExtension() && !isApiToken) {
+                    // Web does not support passwords.
+                    return this.skip();
+                }
+            });
+
+            it('should be able to query kernelspecs', async function () {
+                if (isWebExtension() && !isApiToken) {
+                    // Web does not support passwords.
+                    return this.skip();
+                }
+                const headers = {
+                    Authorization: `token ${hubToken}`
+                };
+                const fetch = new SimpleFetch(new RequestCreator());
+                const response = fetch
+                    .send(
+                        'http://localhost:8000/user/donjayamanne/api/kernelspecs',
+                        {
+                            method: 'GET',
+                            headers
+                        },
+                        cancellationToken.token
+                    )
+                    .catch((ex) => {
+                        console.error('Failed to get kernelspecs', ex);
+                    });
+                console.error('Response', response);
+                console.error('Response', password);
+                // await sleep(10_000);
+                expect(headers).to.be.an('object');
+                if (!isApiToken) {
+                    expect(headers).to.include.keys('_xsrf', 'Cookie', 'X-Xsrftoken');
+                    expect(headers).to.not.include.keys('Authorization');
+                } else {
+                    expect(headers).to.not.include.keys('_xsrf', 'Cookie', 'X-Xsrftoken');
+                    expect(headers).to.include.keys('Authorization');
+                    expect(headers['Authorization']).to.be.equal(`token ${hubToken}`);
+                }
+            });
             it('should get Hub auth info', async () => {
                 const { headers } = await authenticator.getHubApiAuthInfo(
                     { baseUrl, authInfo: { username, password: password() } },

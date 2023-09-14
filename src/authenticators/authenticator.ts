@@ -107,6 +107,15 @@ export class NewAuthenticator implements IAuthenticator {
         };
     }
     private getAuthTokenHeaders(token: string): Record<string, string> {
+        if (isWebExtension()) {
+            // For web, we cannot send `Cache-Control` or other headers/
+            // The response for OPTIONS will let us know in
+            // `Access-Control-Allow-Headers` what headers we can send.
+            return {
+                Authorization: `token ${token}`
+            };
+        }
+
         return {
             Connection: 'keep-alive',
             'Cache-Control': 'no-cache',
