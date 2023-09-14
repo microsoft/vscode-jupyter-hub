@@ -8,9 +8,7 @@ module.exports = {
     ignorePatterns: ['*.js', 'vscode.*.d.ts', 'vscode.d.ts', 'types'],
     parser: '@typescript-eslint/parser',
     parserOptions: {
-        project: [
-            'tsconfig.json'
-        ],
+        project: ['tsconfig.json'],
         sourceType: 'module'
     },
     plugins: [
@@ -21,7 +19,6 @@ module.exports = {
         'eslint-plugin-react',
         '@typescript-eslint',
         '@typescript-eslint/tslint',
-        'eslint-plugin-local-rules',
         'no-only-tests',
         'header'
     ],
@@ -46,12 +43,7 @@ module.exports = {
         'no-unused-vars': 'off',
         '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '_\\w*' }],
         'no-use-before-define': 'off',
-        '@typescript-eslint/no-use-before-define': [
-            'error',
-            {
-                functions: false
-            }
-        ],
+        '@typescript-eslint/no-use-before-define': 'off',
         'no-useless-constructor': 'off',
         '@typescript-eslint/no-useless-constructor': 'error',
         '@typescript-eslint/no-var-requires': 'off',
@@ -111,19 +103,7 @@ module.exports = {
             }
         ],
         'operator-assignment': 'off',
-        'react/jsx-filename-extension': [
-            1,
-            {
-                extensions: ['.tsx']
-            }
-        ],
-        'react/jsx-uses-vars': 'error',
-        'react/jsx-uses-react': 'error',
         'no-restricted-imports': ['error', { paths: ['lodash', 'rxjs', 'lodash/noop', 'rxjs/util/noop'] }],
-        'local-rules/node-imports': ['error', { allow: ['events'] }],
-        'local-rules/dont-use-process': ['error'],
-        'local-rules/dont-use-fspath': ['error'],
-        'local-rules/dont-use-filename': ['error'],
         strict: 'off',
         'header/header': [
             'error',

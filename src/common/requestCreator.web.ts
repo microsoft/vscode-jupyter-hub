@@ -32,6 +32,7 @@ export class JupyterRequestCreator implements IJupyterRequestCreator {
             }
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (getAuthHeaders && Object.keys(getAuthHeaders() || {}).length ? AuthorizingRequest : Request) as any;
     }
 
