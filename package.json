@@ -75,7 +75,8 @@
         "esbuild-release": "npm run esbuild-base-node && npm run esbuild-base-web",
         "esbuild-node-watch": "npm run esbuild-base-node -- --sourcemap --watch",
         "esbuild-web-watch": "npm run esbuild-base-web -- --sourcemap --watch",
-        "test-compile": "tsc -p ./ --watch"
+        "test-compile": "tsc -p ./ --watch",
+        "test": "node ./out/test/runTest.js"
     },
     "dependencies": {
         "@jupyterlab/services": "^7.0.5",
@@ -86,7 +87,7 @@
     },
     "devDependencies": {
         "@types/cookie": "^0.5.1",
-        "@types/mocha": "^9.1.0",
+        "@types/mocha": "^9.1.1",
         "@types/node": "^16.18.6",
         "@types/node-fetch": "^2.5.7",
         "@types/react": "^18.2.21",
@@ -96,7 +97,7 @@
         "@typescript-eslint/parser": "^6.2.0",
         "@vscode/dts": "^0.4.0",
         "@vscode/jupyter-extension": "^0.0.1",
-        "@vscode/test-electron": "^2.2.0",
+        "@vscode/test-electron": "^2.3.4",
         "@vscode/test-web": "^0.0.29",
         "esbuild": "^0.19.2",
         "eslint": "^8.45.0",
@@ -109,6 +110,8 @@
         "eslint-plugin-no-only-tests": "^3.1.0",
         "eslint-plugin-prefer-arrow": "^1.2.3",
         "eslint-plugin-prettier": "^5.0.0",
+        "glob": "^10.3.4",
+        "mocha": "^10.2.0",
         "prettier": "^3.0.0",
         "typescript": "^5.2.2"
     },
