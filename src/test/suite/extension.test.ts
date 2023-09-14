@@ -9,7 +9,7 @@ import { DisposableStore } from '../../common/lifecycle';
 import { activateHubExtension } from './helpers';
 import { noop } from '../../common/utils';
 import { SimpleFetch } from '../../common/request';
-import { JupyterHubConnectionValidator, canGetKernelSpecs } from '../../validator';
+import { JupyterHubConnectionValidator, getKernelSpecs } from '../../validator';
 import { ClassType } from '../../common/types';
 import { BaseCookieStore } from '../../common/cookieStore.base';
 import { IJupyterRequestCreator } from '../../types';
@@ -111,7 +111,7 @@ describe('Authentication', function () {
                     { username: username, headers },
                     requestCreator
                 );
-                const kernelSpecs = await canGetKernelSpecs(serverSettings, cancellationToken.token);
+                const kernelSpecs = await getKernelSpecs(serverSettings, cancellationToken.token);
                 if (!kernelSpecs) {
                     throw new Error('No kernel specs');
                 }

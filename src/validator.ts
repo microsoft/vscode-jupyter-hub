@@ -71,7 +71,7 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
                             { username: authInfo.username, headers: jupyterAuth.headers, token: jupyterAuth.token },
                             this.fetch.requestCreator
                         );
-                        const gotKernelSpecs = await canGetKernelSpecs(settings, token);
+                        const gotKernelSpecs = await getKernelSpecs(settings, token);
                         if (gotKernelSpecs) {
                             return;
                         }
@@ -178,7 +178,7 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
     }
 }
 
-export async function canGetKernelSpecs(
+export async function getKernelSpecs(
     serverSettings: ServerConnection.ISettings,
     token: CancellationToken
 ): Promise<ISpecModels | null | undefined> {
