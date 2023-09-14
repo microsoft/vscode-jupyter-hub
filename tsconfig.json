@@ -11,7 +11,7 @@
             "*": ["types/*"]
         },
         "typeRoots": ["./node_modules/@types"],
-        "types": []
+        "types": ["webpack-env"]
     },
     "include": ["./src/**/*", "./vscode.*"],
     "exclude": ["src/server/node_modules", "src/node_modules"]

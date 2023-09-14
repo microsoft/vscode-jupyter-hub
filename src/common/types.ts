@@ -31,3 +31,7 @@ export type PickType<T, Value> = {
 export type ExcludeType<T, Value> = {
     [P in keyof T as T[P] extends Value ? never : P]: T[P];
 };
+
+export type ReadWrite<T> = {
+    -readonly [P in keyof T]: T[P];
+};

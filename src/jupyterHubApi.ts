@@ -82,7 +82,6 @@ export async function getVersion(url: string, fetch: SimpleFetch, token: Cancell
         },
         token
     );
-
     if (response.status === 200) {
         const { version }: { version: string } = await response.json();
         return version;
@@ -143,14 +142,24 @@ export function createServerConnectSettings(
 }
 
 export function getJupyterUrl(baseUrl: string, username: string) {
-    return appendUrlPath(baseUrl, `user/${username}/`);
+    return appendUrlPath(baseUrl, `user/${encodeURIComponent(username)}/`);
 }
 export function getHubApiUrl(baseUrl: string) {
     return appendUrlPath(baseUrl, `hub/api`);
 }
 export function getJupyterLogoutUrl(baseUrl: string, username: string) {
-    return appendUrlPath(baseUrl, `user/${username}/logout`);
+    return appendUrlPath(baseUrl, `user/${encodeURIComponent(username)}/logout`);
 }
+export function getUserApiTokenUrl(baseUrl: string, username: string, tokenId: string) {
+    return appendUrlPath(
+        baseUrl,
+        `hub/api/users/${encodeURIComponent(username)}/tokens/${encodeURIComponent(tokenId)}`
+    );
+}
+export function getApiTokenGenerationUrl(baseUrl: string, username: string) {
+    return appendUrlPath(baseUrl, `hub/api/users/${encodeURIComponent(username)}/tokens`);
+}
+
 export function getHubLogoutUrl(baseUrl: string) {
     return appendUrlPath(baseUrl, `hub/logout`);
 }
