@@ -233,7 +233,6 @@ export async function canGetKernelSpecs(
         );
 
         if (hasKernelSpecs()) {
-            console.error(specsManager.specs && Object.keys(specsManager.specs.kernelspecs).length > 0);
             return specsManager.specs;
         }
         traceError(
