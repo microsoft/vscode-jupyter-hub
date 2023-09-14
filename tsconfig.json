@@ -1,0 +1,18 @@
+{
+    "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "baseUrl": ".",
+        "rootDir": "src",
+        "outDir": "out",
+
+        // Types
+        "lib": ["es6", "es2018", "dom", "ES2019", "ES2020"],
+        "paths": {
+            "*": ["types/*"]
+        },
+        "typeRoots": ["./node_modules/@types"],
+        "types": []
+    },
+    "include": ["./src/**/*", "./vscode.*"],
+    "exclude": ["src/server/node_modules", "src/node_modules"]
+}

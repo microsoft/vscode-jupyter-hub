@@ -1,0 +1,132 @@
+{
+    "name": "jupyter-hub",
+    "displayName": "JupyterHub",
+    "version": "2023.9.100",
+    "description": "Support for connecting to Jupyter Hub in VS Code along with the Jupyter Extension",
+    "publisher": "ms-toolsai",
+    "preview": true,
+    "author": {
+        "name": "Microsoft Corporation"
+    },
+    "extensionPack": [
+        "ms-toolsai.jupyter"
+    ],
+    "license": "MIT",
+    "homepage": "https://github.com/Microsoft/vscode-jupyter-hub",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Microsoft/vscode-jupyter-hub"
+    },
+    "bugs": {
+        "url": "https://github.com/Microsoft/vscode-jupyter-hub/issues"
+    },
+    "qna": "https://github.com/microsoft/vscode-jupyter-hub/discussions",
+    "icon": "icon.png",
+    "galleryBanner": {
+        "color": "#ffffff",
+        "theme": "light"
+    },
+    "engines": {
+        "vscode": "^1.82.0"
+    },
+    "l10n": "./l10n",
+    "keywords": [
+        "jupyter",
+        "jupyterhub",
+        "notebook",
+        "notebookKernelJupyterNotebook",
+        "multi-root ready",
+        "python",
+        "interactive"
+    ],
+    "categories": [
+        "Data Science",
+        "Machine Learning",
+        "Notebooks"
+    ],
+    "activationEvents": [
+        "onNotebook:jupyter-notebook",
+        "onNotebook:interactive"
+    ],
+    "main": "./dist/extension.node.js",
+    "browser": "./dist/extension.web.js",
+    "capabilities": {
+        "virtualWorkspaces": true,
+        "untrustedWorkspaces": {
+            "supported": "limited",
+            "description": "%capabilities.untrustedWorkspace.description%"
+        }
+    },
+    "contributes": {},
+    "enabledApiProposals": [],
+    "scripts": {
+        "package": "npm run esbuild-release && vsce package -o ms-toolsai-jupyter-hub-insiders.vsix",
+        "packagex": "gulp clean && npm run esbuild-release && vsce package -o ms-toolsai-jupyter-hub-insiders.vsix",
+        "compile": "npm run esbuild-base-node && npm run esbuild-base-web",
+        "checkDependencies": "gulp checkDependencies",
+        "postinstall": "npx vscode-dts 1.82.0",
+        "test:unittests": "mocha --config ./build/.mocha.unittests.js.json ./out/**/*.unit.test.js",
+        "lint": "eslint -c .eslintrc.js --ext .ts --ext .tsx src",
+        "prettier-fix": "prettier 'src/**/*.ts*' --write && prettier 'build/**/*.js' --write",
+        "clean": "gulp clean",
+        "updateBuildNumber": "gulp updateBuildNumber",
+        "esbuild-base-node": "esbuild ./src/extension.node.ts --bundle --outfile=dist/extension.node.js --external:vscode --format=cjs --platform=node",
+        "esbuild-base-web": "esbuild ./src/extension.web.ts --bundle --outfile=dist/extension.web.js --external:vscode --format=cjs --target=es2018 --define:global=this",
+        "esbuild-test-web": "esbuild ./src/test/suite/index.web.ts --bundle --outfile=dist/test.index.web.js --external:vscode --format=cjs --target=es2018 --define:global=this --alias:stream=stream-browserify",
+        "esbuild": "npm run esbuild-base-node -- --sourcemap && npm run esbuild-base-web -- --sourcemap",
+        "esbuild-release": "npm run esbuild-base-node && npm run esbuild-base-web",
+        "esbuild-node-watch": "npm run esbuild-base-node -- --sourcemap --watch",
+        "esbuild-web-watch": "npm run esbuild-base-web -- --sourcemap --watch",
+        "esbuild-web-test": "npm run esbuild-test-web -- --sourcemap",
+        "test-compile": "tsc -p ./",
+        "test-compile-watch": "tsc -p ./ --watch",
+        "test": "node ./out/test/runTest.js",
+        "test:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/test.index.web.js ./tmp",
+        "test-compile-webpack": "webpack"
+    },
+    "dependencies": {
+        "@jupyterlab/services": "^7.0.5",
+        "@vscode/extension-telemetry": "^0.7.7",
+        "cookie": "^0.5.0",
+        "isomorphic-ws": "^4.0.1",
+        "node-fetch": "^2.6.7"
+    },
+    "devDependencies": {
+        "@types/chai": "^4.3.6",
+        "@types/cookie": "^0.5.1",
+        "@types/mocha": "^9.1.1",
+        "@types/node": "^16.18.6",
+        "@types/node-fetch": "^2.5.7",
+        "@types/react": "^18.2.21",
+        "@types/ws": "^6.0.1",
+        "@typescript-eslint/eslint-plugin": "^6.2.0",
+        "@typescript-eslint/eslint-plugin-tslint": "^6.2.0",
+        "@typescript-eslint/parser": "^6.2.0",
+        "@vscode/dts": "^0.4.0",
+        "@vscode/jupyter-extension": "^0.0.3",
+        "@vscode/test-electron": "^2.3.4",
+        "@vscode/test-web": "^0.0.29",
+        "chai": "^4.3.8",
+        "esbuild": "^0.19.2",
+        "eslint": "^8.45.0",
+        "eslint-config-airbnb": "^19.0.4",
+        "eslint-config-prettier": "^8.9.0",
+        "eslint-plugin-header": "^3.1.1",
+        "eslint-plugin-import": "^2.27.5",
+        "eslint-plugin-jsdoc": "^46.4.5",
+        "eslint-plugin-no-null": "^1.0.2",
+        "eslint-plugin-no-only-tests": "^3.1.0",
+        "eslint-plugin-prefer-arrow": "^1.2.3",
+        "eslint-plugin-prettier": "^5.0.0",
+        "glob": "^10.3.4",
+        "mocha": "^10.2.0",
+        "prettier": "^3.0.0",
+        "typescript": "^5.2.2"
+    },
+    "devDependenciesComments": {
+        "@types/react": "Added to ensure @lumino compiles, @lumino is a dependency of Jupyter Lab npm"
+    },
+    "optionalDependencies": {
+        "fsevents": "^2.3.2"
+    }
+}
