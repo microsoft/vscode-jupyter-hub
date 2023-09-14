@@ -6,6 +6,7 @@ import {
     CancellationToken,
     Disposable,
     EventEmitter,
+    QuickInputButton,
     QuickInputButtons,
     QuickPickItem,
     QuickPickItemButtonEvent,
@@ -31,6 +32,8 @@ export class WorkflowInputCapture {
             validationMessage?: string;
             password?: boolean;
             validateInput?(value: string): Promise<string | undefined>;
+            buttons?: QuickInputButton[];
+            onDidTriggerButton?: (e: QuickInputButton) => void;
         },
         token: CancellationToken
     ) {
@@ -45,9 +48,10 @@ export class WorkflowInputCapture {
             input.placeholder = options.placeholder || '';
             input.password = options.password === true;
             input.validationMessage = options.validationMessage || '';
-            input.buttons = [QuickInputButtons.Back];
+            input.buttons = [QuickInputButtons.Back, ...(options.buttons || [])];
             input.show();
             input.onDidChangeValue(() => (input.validationMessage = ''), this, this.disposables);
+            input.onDidTriggerButton((e) => options.onDidTriggerButton?.(e), this, this.disposables);
             input.onDidHide(() => reject(new CancellationError()), this, this.disposables);
             input.onDidTriggerButton(
                 (e) => {

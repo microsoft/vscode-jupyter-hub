@@ -19,7 +19,7 @@ export async function activate(context: ExtensionContext) {
             const requestCreator = new JupyterRequestCreator();
             const fetch = new SimpleFetch(requestCreator);
             const storage = disposableStore.add(new JupyterHubServerStorage(context.secrets, context.globalState));
-            const uriCapture = disposableStore.add(new JupyterHubUrlCapture(fetch, false, storage, CookieStore));
+            const uriCapture = disposableStore.add(new JupyterHubUrlCapture(fetch, storage, CookieStore));
             disposableStore.add(new JupyterServerIntegration(fetch, api.exports, storage, uriCapture, CookieStore));
         })
         .catch((ex) => traceError('Failed to activate jupyter extension', ex));

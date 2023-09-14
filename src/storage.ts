@@ -14,7 +14,6 @@ function getAuthInfoKey(serverId: string) {
 type Credentials = {
     username: string;
     password: string;
-    token: string;
 };
 
 export class JupyterHubServerStorage implements IJupyterHubServerStorage {
@@ -36,9 +35,7 @@ export class JupyterHubServerStorage implements IJupyterHubServerStorage {
     }[] {
         return this.globalMemento.get<JupyterHubServer[]>(serverListStorageKey, []);
     }
-    public async getCredentials(
-        serverId: string
-    ): Promise<{ username: string; password: string; token: string } | undefined> {
+    public async getCredentials(serverId: string): Promise<{ username: string; password: string } | undefined> {
         try {
             const js = await this.secrets.get(getAuthInfoKey(serverId));
             if (!js) {
@@ -52,7 +49,7 @@ export class JupyterHubServerStorage implements IJupyterHubServerStorage {
     }
     public async addServerOrUpdate(
         server: { authProvider: 'old' | 'new'; id: string; baseUrl: string; displayName: string },
-        auth: { username: string; password: string; token: string }
+        auth: { username: string; password: string }
     ) {
         await Promise.all([
             this.globalMemento.update(serverListStorageKey, this.all.filter((s) => s.id !== server.id).concat(server)),
