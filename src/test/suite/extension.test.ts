@@ -68,16 +68,6 @@ describe('Authentication', function () {
                 }
             });
 
-            it.skip('should be able to query kernelspecs', async function () {
-                const headers = { Authorization: `token ${hubToken}` };
-                const fetch = new SimpleFetch(new RequestCreator());
-                const response = await fetch.send(
-                    'http://localhost:8000/user/donjayamanne/api/kernelspecs',
-                    { method: 'GET', headers },
-                    cancellationToken.token
-                );
-                expect(response).to.have.property('status', 200);
-            });
             it('should get Hub auth info', async () => {
                 const { headers } = await authenticator.getHubApiAuthInfo(
                     { baseUrl, authInfo: { username, password: password() } },
