@@ -4,15 +4,16 @@
 import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { downloadAndUnzipVSCode, resolveCliPathFromVSCodeExecutablePath, runTests } from '@vscode/test-electron';
+import { TEMP_DIR } from './constants.node';
+import { startJupterHub } from './suite/helpers.node';
+import { dispose } from '../common/lifecycle';
 
 async function main() {
+    const disposables: { dispose(): void }[] = [];
     try {
-        // The folder containing the Extension Manifest package.json
-        // Passed to `--extensionDevelopmentPath`
         const extensionDevelopmentPath = path.resolve(__dirname, '../../');
+        disposables.push(await startJupterHub());
 
-        // The path to test runner
-        // Passed to --extensionTestsPath
         const extensionTestsPath = path.resolve(__dirname, './suite/index');
         const vscodeExecutablePath = await downloadAndUnzipVSCode('insiders');
         const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath);
@@ -23,10 +24,12 @@ async function main() {
         });
 
         // Download VS Code, unzip it and run the integration test
-        await runTests({ extensionDevelopmentPath, extensionTestsPath });
+        await runTests({ extensionDevelopmentPath, extensionTestsPath, launchArgs: [TEMP_DIR] });
     } catch (err) {
         console.error('Failed to run tests', err);
         process.exit(1);
+    } finally {
+        dispose(disposables);
     }
 }
 

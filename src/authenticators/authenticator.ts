@@ -5,7 +5,7 @@ import { CancellationToken, CancellationTokenSource } from 'vscode';
 import { SimpleFetch } from '../common/request';
 import { IAuthenticator } from './types';
 import { BaseCookieStore } from '../common/cookieStore.base';
-import { appendUrlPath } from '../utils';
+import { appendUrlPath, isWebExtension } from '../utils';
 import { ClassType } from '../common/types';
 import {
     getJupyterHubBaseUrl,
@@ -39,6 +39,11 @@ export class NewAuthenticator implements IAuthenticator {
         },
         token: CancellationToken
     ): Promise<{ headers: Record<string, string> }> {
+        if (isWebExtension()) {
+            return {
+                headers: this.getAuthTokenHeaders(options.authInfo.password)
+            };
+        }
         const isAuthToken = await this.isPasswordAnAuthToken(options, token);
         if (isAuthToken) {
             return {

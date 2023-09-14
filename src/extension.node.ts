@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-import { ExtensionContext } from 'vscode';
+import { ExtensionContext, ExtensionMode } from 'vscode';
 import { disposableStore } from './common/lifecycle';
 import { JupyterHubUrlCapture } from './urlCapture';
 import { JupyterRequestCreator } from './common/requestCreator.node';
@@ -11,6 +11,7 @@ import { JupyterHubServerStorage } from './storage';
 import { SimpleFetch } from './common/request';
 import { JupyterServerIntegration } from './jupyterIntegration';
 import { CookieStore } from './common/cookieStore.node';
+import { ClassImplementationsForTests } from './testUtils';
 
 export async function activate(context: ExtensionContext) {
     context.subscriptions.push(disposableStore);
@@ -23,4 +24,7 @@ export async function activate(context: ExtensionContext) {
             disposableStore.add(new JupyterServerIntegration(fetch, api.exports, storage, uriCapture, CookieStore));
         })
         .catch((ex) => traceError('Failed to activate jupyter extension', ex));
+    if (context.extensionMode === ExtensionMode.Test) {
+        return { RequestCreator: JupyterRequestCreator, CookieStore } as ClassImplementationsForTests;
+    }
 }

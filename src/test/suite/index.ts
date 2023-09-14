@@ -5,7 +5,7 @@ import * as path from 'path';
 import Mocha from 'mocha';
 import * as glob from 'glob';
 
-export function run(): Promise<void> {
+export async function run(): Promise<void> {
     // Create the mocha test
     const mocha = new Mocha({
         ui: 'bdd',
@@ -13,7 +13,6 @@ export function run(): Promise<void> {
     });
 
     const testsRoot = path.resolve(__dirname, '..');
-
     return new Promise((c, e) => {
         const testFiles = new glob.Glob('**/**.test.js', { cwd: testsRoot });
         const testFileStream = testFiles.stream();
