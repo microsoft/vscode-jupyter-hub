@@ -48,7 +48,6 @@
         "onNotebook:interactive"
     ],
     "main": "./dist/extension.node.js",
-    "browser": "./dist/extension.web.js",
     "capabilities": {
         "virtualWorkspaces": true,
         "untrustedWorkspaces": {
@@ -72,7 +71,7 @@
         "esbuild-base-node": "esbuild ./src/extension.node.ts --bundle --outfile=dist/extension.node.js --external:vscode --format=cjs --platform=node",
         "esbuild-base-web": "esbuild ./src/extension.web.ts --bundle --outfile=dist/extension.web.js --external:vscode --format=cjs --target=es2018 --define:global=this",
         "esbuild": "npm run esbuild-base-node -- --sourcemap && npm run esbuild-base-web -- --sourcemap",
-        "esbuild-release": "npm run esbuild-base-node && npm run esbuild-base-web",
+        "esbuild-release": "npm run esbuild-base-node",
         "esbuild-node-watch": "npm run esbuild-base-node -- --sourcemap --watch",
         "esbuild-web-watch": "npm run esbuild-base-web -- --sourcemap --watch",
         "test-compile": "tsc -p ./ --watch"
