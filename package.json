@@ -72,12 +72,17 @@
         "updateBuildNumber": "gulp updateBuildNumber",
         "esbuild-base-node": "esbuild ./src/extension.node.ts --bundle --outfile=dist/extension.node.js --external:vscode --format=cjs --platform=node",
         "esbuild-base-web": "esbuild ./src/extension.web.ts --bundle --outfile=dist/extension.web.js --external:vscode --format=cjs --target=es2018 --define:global=this",
+        "esbuild-test-web": "esbuild ./src/test/suite/index.web.ts --bundle --outfile=dist/test.index.web.js --external:vscode --format=cjs --target=es2018 --define:global=this --alias:stream=stream-browserify",
         "esbuild": "npm run esbuild-base-node -- --sourcemap && npm run esbuild-base-web -- --sourcemap",
         "esbuild-release": "npm run esbuild-base-node && npm run esbuild-base-web",
         "esbuild-node-watch": "npm run esbuild-base-node -- --sourcemap --watch",
         "esbuild-web-watch": "npm run esbuild-base-web -- --sourcemap --watch",
+        "esbuild-web-test": "npm run esbuild-test-web -- --sourcemap",
         "test-compile": "tsc -p ./",
-        "test": "node ./out/test/runTest.js"
+        "test-compile-watch": "tsc -p ./ --watch",
+        "test": "node ./out/test/runTest.js",
+        "test:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/test.index.web.js ./tmp",
+        "test-compile-webpack": "webpack"
     },
     "dependencies": {
         "@jupyterlab/services": "^7.0.5",
@@ -87,6 +92,7 @@
         "node-fetch": "^2.6.7"
     },
     "devDependencies": {
+        "@types/chai": "^4.3.6",
         "@types/cookie": "^0.5.1",
         "@types/mocha": "^9.1.1",
         "@types/node": "^16.18.6",
@@ -100,6 +106,7 @@
         "@vscode/jupyter-extension": "^0.0.3",
         "@vscode/test-electron": "^2.3.4",
         "@vscode/test-web": "^0.0.29",
+        "chai": "^4.3.8",
         "esbuild": "^0.19.2",
         "eslint": "^8.45.0",
         "eslint-config-airbnb": "^19.0.4",
