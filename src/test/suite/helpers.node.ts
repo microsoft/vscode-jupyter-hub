@@ -26,21 +26,17 @@ function setupTempDir() {
 
 export async function generateJupyberHubToken() {
     return new Promise<string>((resolve) => {
-        try {
-            const proc = spawn(
-                CI_PYTHON_PATH,
-                ['-m', 'jupyterhub', 'token', os.userInfo().username, '--config', configFile],
-                {
-                    cwd: TEMP_DIR,
-                    env: process.env
-                }
-            );
-            proc.stdout.on('data', (data) => {
-                resolve(data.toString().trim());
-            });
-        } catch (ex) {
-            console.error('Failed to generate JupyterHub token', ex);
-        }
+        const proc = spawn(
+            CI_PYTHON_PATH,
+            ['-m', 'jupyterhub', 'token', os.userInfo().username, '--config', configFile],
+            {
+                cwd: TEMP_DIR,
+                env: process.env
+            }
+        );
+        proc.stdout.on('data', (data) => {
+            resolve(data.toString().trim());
+        });
     });
 }
 function spawnJupyterHub() {

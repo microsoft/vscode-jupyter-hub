@@ -1,11 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-import * as os from 'os';
 import { assert, expect } from 'chai';
+import * as os from 'os';
 import { NewAuthenticator } from '../../authenticators/authenticator';
 import { CancellationTokenSource, Uri, workspace } from 'vscode';
-import { DisposableStore } from '../../common/lifecycle';
+import { DisposableStore, IDisposable } from '../../common/lifecycle';
 import { activateHubExtension } from './helpers';
 import { noop } from '../../common/utils';
 import { SimpleFetch } from '../../common/request';
@@ -17,28 +17,32 @@ import { createServerConnectSettings } from '../../jupyterHubApi';
 import { KernelManager, SessionManager } from '@jupyterlab/services';
 
 const TIMEOUT = 30_000; // Spinning up jupyter servers could take a while.
+
 describe('Authentication', function () {
     let baseUrl = 'http://localhost:8000';
     let hubToken = '';
+    // const anotherUserName = 'joe'; // Defined in config file.
     let cancellationToken: CancellationTokenSource;
+    const disposables: IDisposable[] = [];
     this.timeout(TIMEOUT);
+    const username = os.userInfo().username;
     let RequestCreator: ClassType<IJupyterRequestCreator>;
     let CookieStore: ClassType<BaseCookieStore>;
-    const username = os.userInfo().username;
     let disposableStore: DisposableStore;
     let authenticator: NewAuthenticator;
     let fetch: SimpleFetch;
     let requestCreator: IJupyterRequestCreator;
     before(async function () {
         this.timeout(TIMEOUT);
-        cancellationToken = new CancellationTokenSource();
         const file = Uri.joinPath(workspace.workspaceFolders![0].uri, 'jupyterhub.json');
         const promise = activateHubExtension().then((classes) => {
-            RequestCreator = classes.RequestCreator;
-            CookieStore = classes.CookieStore;
+            RequestCreator = classes!.RequestCreator;
+            CookieStore = classes!.CookieStore;
         });
 
         activateHubExtension().catch(noop);
+        cancellationToken = new CancellationTokenSource();
+        disposables.push(cancellationToken);
         const { url, token } = JSON.parse(Buffer.from(await workspace.fs.readFile(file)).toString());
         baseUrl = url;
         hubToken = token;
