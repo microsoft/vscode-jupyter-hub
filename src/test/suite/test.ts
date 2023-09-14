@@ -1,10 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-import { setIsWebExtension } from '../../utils';
-
-setIsWebExtension();
-
 // Imports mocha for the browser, defining the `mocha` global.
 // require(`./extension.test.ts`);
 export function run(): Promise<void> {
@@ -29,7 +25,6 @@ export function run(): Promise<void> {
                 }
             });
         } catch (err) {
-            console.error(err);
             e(err);
         }
     });
