@@ -109,7 +109,7 @@ export class NewAuthenticator implements IAuthenticator {
             };
         }
         const url = getApiTokenGenerationUrl(options.baseUrl, options.authInfo.username);
-        const body = { username: options.authInfo.username, password: options.authInfo.password };
+        const body = { auth: { username: options.authInfo.username, password: options.authInfo.password } };
         type ResponseType = { user: string; id: string; token: string };
         const response = await this.fetch.send(url, { method: 'POST', body: JSON.stringify(body) }, token);
         const json = (await response.json()) as ResponseType;
