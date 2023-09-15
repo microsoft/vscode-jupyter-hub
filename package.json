@@ -81,8 +81,10 @@
         "test-compile": "tsc -p ./",
         "test-compile-watch": "tsc -p ./ --watch",
         "test": "node ./out/test/runTest.js",
-        "test:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/test.index.web.js ./tmp",
-        "test-compile-webpack": "webpack --watch",
+        "test:web": "vscode-test-web --quality=stable --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/test.index.web.js ./tmp",
+        "test:web:ci": "node ./out/test/runTest.web.js",
+        "test-compile-webpack": "webpack",
+        "test-compile-webpack-watch": "webpack --watch",
         "open-in-browser": "vscode-test-web --extensionDevelopmentPath=. ./tmp"
     },
     "dependencies": {

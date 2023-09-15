@@ -62,12 +62,12 @@ describe('Authentication', function () {
     ].forEach(({ title, password, isApiToken }) => {
         describe(title, function () {
             before(function () {
-                if (isWebExtension() && !isApiToken) {
-                    // Web does not support passwords.
+                if (isWebExtension() && password() === hubToken) {
+                    // Web does not support tokens generated via CLI.
+                    // API tokens must be generated via the REST API using username/password.
                     return this.skip();
                 }
             });
-
             it('should get Hub auth info', async () => {
                 const { headers } = await authenticator.getHubApiAuthInfo(
                     { baseUrl, authInfo: { username, password: password() } },
@@ -107,6 +107,26 @@ describe('Authentication', function () {
                     cancellationToken.token
                 );
             });
+            // it.only('should be able to query kernelspecs', async function () {
+            //     const headers = { Authorization: `token ${hubToken}` };
+            //     const fetch = new SimpleFetch(new RequestCreator());
+            //     const response = await fetch.send(
+            //         'http://localhost:8000/user/donjayamanne/api/kernelspecs',
+            //         { method: 'GET', headers },
+            //         cancellationToken.token
+            //     );
+            //     expect(response).to.have.property('status', 200);
+            // });
+            // it('should be able to query kernelspecs', async function () {
+            //     const headers = { Authorization: `token 6e9452e5ce6b4d5eb5d1697dfe75ff30` };
+            //     const fetch = new SimpleFetch(new RequestCreator());
+            //     const response = await fetch.send(
+            //         'http://localhost:8000/user/donjayamanne/api/kernelspecs',
+            //         { method: 'GET', headers },
+            //         cancellationToken.token
+            //     );
+            //     expect(response).to.have.property('status', 200);
+            // });
             it('should be able to start a session', async function () {
                 // Found while dev that even though we get the cookies/headers and the like
                 // Some paths in the app like retrieving kernel specs/sessions can be succesful,
