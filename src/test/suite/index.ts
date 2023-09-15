@@ -4,6 +4,10 @@
 import * as path from 'path';
 import Mocha from 'mocha';
 import * as glob from 'glob';
+import { setWebSocketCreator } from './helpers';
+import { getWebsocketCtor } from './wesocketCtor.node';
+
+setWebSocketCreator(getWebsocketCtor);
 
 export async function run(): Promise<void> {
     // Create the mocha test
