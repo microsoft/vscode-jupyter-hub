@@ -48,7 +48,7 @@ export async function generateJupyberHubToken() {
 }
 function spawnJupyterHub() {
     const proc = spawn('python', ['-m', 'jupyterhub', '--config', configFile], {
-        stdio: 'inherit',
+        stdout: 'pipe',
         cwd: TEMP_DIR
     });
     return { dispose: () => proc.kill() };
