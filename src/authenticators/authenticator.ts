@@ -17,6 +17,7 @@ import {
     getHubApiUrl
 } from '../jupyterHubApi';
 import { noop } from '../common/utils';
+import { traceDebug } from '../common/logging';
 
 export class NewAuthenticator implements IAuthenticator {
     private readonly logoutUrls: { url: string; headers: Record<string, string> }[] = [];
@@ -209,26 +210,24 @@ export class NewAuthenticator implements IAuthenticator {
         token: CancellationToken
     ) {
         const baseUrl = await getJupyterHubBaseUrl(options.baseUrl, this.fetch, token);
-        // We do not support passwords in web, only tokens, hence assume what we have is a token
-        if (isWebExtension()) {
-            return true;
-        }
-        // Open login page.
-        let location = appendUrlPath(baseUrl, 'api/user');
-        const response = await this.fetch.send(
-            location,
-            {
-                method: 'GET',
-                headers: {
-                    Connection: 'keep-alive',
-                    'Cache-Control': 'no-cache',
-                    Authorization: `token ${options.authInfo.password}`
-                }
-            },
-            token
-        );
+        try {
+            let location = appendUrlPath(baseUrl, `api/users/${encodeURIComponent(options.authInfo.username)}`);
+            const headers = this.getAuthTokenHeaders(options.authInfo.password);
+            const response = await this.fetch.send(
+                location,
+                {
+                    method: 'GET',
+                    headers
+                },
+                token
+            );
 
-        return response.status === 200;
+            return response.status === 200;
+        } catch (ex) {
+            // Request can fail due to CORS.
+            traceDebug('isPasswordAnAuthToken is false due to an error', ex);
+            return false;
+        }
     }
 
     private async getBaseAuthInfo(

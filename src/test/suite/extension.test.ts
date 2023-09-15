@@ -62,12 +62,12 @@ describe('Authentication', function () {
     ].forEach(({ title, password, isApiToken }) => {
         describe(title, function () {
             before(function () {
-                if (isWebExtension() && !isApiToken) {
-                    // Web does not support passwords.
+                if (isWebExtension() && password() === hubToken) {
+                    // Web does not support tokens generated via CLI.
+                    // API tokens must be generated via the REST API using username/password.
                     return this.skip();
                 }
             });
-
             it('should get Hub auth info', async () => {
                 const { headers } = await authenticator.getHubApiAuthInfo(
                     { baseUrl, authInfo: { username, password: password() } },
