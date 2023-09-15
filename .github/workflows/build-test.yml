@@ -112,6 +112,7 @@ jobs:
     - run: npm i -g @vscode/vsce
     - run: npm ci
     - run: npm run esbuild-base-web
+    - run: npm run test-compile
     - run: npm run test-compile-webpack
     - run: python -m pip install jupyterhub jupyter-core jupyterlab
     - run: npm i -g configurable-http-proxy
