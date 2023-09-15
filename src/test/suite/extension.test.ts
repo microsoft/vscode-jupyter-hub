@@ -107,26 +107,6 @@ describe('Authentication', function () {
                     cancellationToken.token
                 );
             });
-            // it.only('should be able to query kernelspecs', async function () {
-            //     const headers = { Authorization: `token ${hubToken}` };
-            //     const fetch = new SimpleFetch(new RequestCreator());
-            //     const response = await fetch.send(
-            //         'http://localhost:8000/user/donjayamanne/api/kernelspecs',
-            //         { method: 'GET', headers },
-            //         cancellationToken.token
-            //     );
-            //     expect(response).to.have.property('status', 200);
-            // });
-            // it('should be able to query kernelspecs', async function () {
-            //     const headers = { Authorization: `token 6e9452e5ce6b4d5eb5d1697dfe75ff30` };
-            //     const fetch = new SimpleFetch(new RequestCreator());
-            //     const response = await fetch.send(
-            //         'http://localhost:8000/user/donjayamanne/api/kernelspecs',
-            //         { method: 'GET', headers },
-            //         cancellationToken.token
-            //     );
-            //     expect(response).to.have.property('status', 200);
-            // });
             it('should be able to start a session', async function () {
                 // Found while dev that even though we get the cookies/headers and the like
                 // Some paths in the app like retrieving kernel specs/sessions can be succesful,
