@@ -5,6 +5,7 @@ import { CancellationToken, ConfigurationTarget, window, workspace } from 'vscod
 import { IJupyterRequestCreator } from '../types';
 import { Localized } from './localize';
 import { raceCancellationError } from './async';
+import { solveCertificateProblem } from './telemetry';
 
 /**
  * Responsible for intercepting connections to a remote server and asking for a password if necessary
@@ -33,7 +34,7 @@ export class SimpleFetch {
                     Localized.jupyterSelfCertClose
                 );
                 if (value === Localized.jupyterSelfCertEnable) {
-                    // sendTelemetryEvent(Telemetry.SelfCertsMessageEnabled);
+                    solveCertificateProblem('self-signed', 'allow');
                     await workspace
                         .getConfiguration('jupyter')
                         .updateSetting(
@@ -45,7 +46,7 @@ export class SimpleFetch {
                     // Now that we have fixed the error, lets try to send the request again.
                     return this.requestCreator.getFetchMethod()(url, this.addAllowUnauthorized(url, true, options));
                 } else if (value === Localized.jupyterSelfCertClose) {
-                    // sendTelemetryEvent(Telemetry.SelfCertsMessageClose);
+                    solveCertificateProblem('self-signed', 'cancel');
                 }
             }
             throw e;

@@ -3,12 +3,40 @@
 
 import { CancellationToken, workspace } from 'vscode';
 import { SimpleFetch } from './common/request';
-import { IJupyterRequestCreator, ApiTypes } from './types';
+import { IJupyterRequestCreator } from './types';
 import { ServerConnection } from '@jupyterlab/services';
 import { traceDebug, traceError } from './common/logging';
 import { appendUrlPath } from './utils';
 import { noop } from './common/utils';
 import { trackUsageOfOldApiGeneration } from './common/telemetry';
+
+export namespace ApiTypes {
+    export interface UserInfo {
+        server: string;
+        last_activity: Date;
+        roles: string[];
+        groups: string[];
+        name: string;
+        admin: boolean;
+        pending: null | 'spawn';
+        servers: Record<
+            string,
+            {
+                name: string;
+                last_activity: Date;
+                started: Date;
+                pending: null | 'spawn';
+                ready: boolean;
+                stopped: boolean;
+                url: string;
+                user_options: {};
+                progress_url: string;
+            }
+        >;
+        session_id: string;
+        scopes: string[];
+    }
+}
 
 export async function getVersion(url: string, fetch: SimpleFetch, token: CancellationToken): Promise<string> {
     // Otherwise request hub/api. This should return the json with the hub version
@@ -44,6 +72,7 @@ export async function deleteApiToken(
     const options = { method: 'DELETE', headers: { Authorization: `token ${token}` } };
     await fetch.send(url, options, cancellationToken);
 }
+
 export async function verifyApiToken(
     baseUrl: string,
     username: string,
@@ -84,6 +113,11 @@ export async function generateNewApiToken(
     }
 }
 
+/**
+ * This is a backup way of generating tokens.
+ * In 1.5 the new approach was introduced, but we need to support older versions.
+ * This in case we have users with older versions.
+ */
 export async function generateNewApiTokenOldWay(
     baseUrl: string,
     username: string,

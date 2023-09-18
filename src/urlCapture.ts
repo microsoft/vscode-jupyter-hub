@@ -11,22 +11,22 @@ import { JupyterHubConnectionValidator, isSelfCertsError, isSelfCertsExpiredErro
 import { WorkflowInputCapture } from './common/inputCapture';
 import { JupyterHubServerStorage } from './storage';
 import { SimpleFetch } from './common/request';
-import { IAuthenticator } from './authenticators/types';
-import { NewAuthenticator } from './authenticators/authenticator';
+import { IAuthenticator } from './types';
+import { Authenticator } from './authenticator';
 import { extractUserNameFromUrl, getJupyterHubBaseUrl, getVersion } from './jupyterHubApi';
 import { isWebExtension } from './utils';
-import { sendJupyterHubVersion } from './common/telemetry';
+import { sendJupyterHubUrlAdded, sendJupyterHubUrlNotAdded } from './common/telemetry';
 
 export class JupyterHubUrlCapture {
     private readonly jupyterConnection: JupyterHubConnectionValidator;
     private readonly displayNamesOfHandles = new Map<string, string>();
-    private readonly newAuthenticator: NewAuthenticator;
+    private readonly newAuthenticator: Authenticator;
     private readonly disposable = new DisposableStore();
     constructor(
         private readonly fetch: SimpleFetch,
         private readonly storage: JupyterHubServerStorage
     ) {
-        this.newAuthenticator = new NewAuthenticator(fetch);
+        this.newAuthenticator = new Authenticator(fetch);
         this.jupyterConnection = new JupyterHubConnectionValidator(fetch);
     }
     dispose() {
@@ -112,10 +112,11 @@ export class JupyterHubUrlCapture {
                 }
                 nextStep = await step.run(state, token);
                 if (nextStep === 'Before') {
+                    sendJupyterHubUrlNotAdded('back', step.step);
                     return;
                 }
                 if (nextStep === 'After') {
-                    sendJupyterHubVersion(state.baseUrl, state.hubVersion, id);
+                    sendJupyterHubUrlAdded(state.baseUrl, state.hubVersion, id);
                     await this.storage.addServerOrUpdate(
                         {
                             id,
@@ -151,11 +152,15 @@ export class JupyterHubUrlCapture {
                     nextStep = stepsExecuted.pop();
                     continue;
                 }
+                sendJupyterHubUrlNotAdded('cancel', step.step);
                 return;
             }
         } catch (ex) {
-            if (!(ex instanceof CancellationError)) {
+            if (ex instanceof CancellationError) {
+                sendJupyterHubUrlNotAdded('cancel', '');
+            } else {
                 traceError('Failed to capture remote jupyter server', ex);
+                sendJupyterHubUrlNotAdded('error', '');
             }
             throw ex;
         } finally {
@@ -187,6 +192,7 @@ type State = {
         tokenId: string;
     };
 };
+
 class GetUrlStep extends DisposableStore implements MultiStep<Step, State> {
     step: Step = 'Get Url';
     canNavigateBackToThis = true;

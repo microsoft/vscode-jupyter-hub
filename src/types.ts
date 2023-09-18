@@ -4,7 +4,6 @@
 // eslint-disable @typescript-eslint/no-explicit-any
 
 import { CancellationToken, Event } from 'vscode';
-import { IAuthenticator } from './authenticators/types';
 import { ClassType } from './common/types';
 
 export interface IJupyterRequestCreator {
@@ -46,33 +45,16 @@ export interface IJupyterHubConnectionValidator {
     ): Promise<void>;
 }
 
-export interface IJupyterHubApi {
-    getVersion(): Promise<string>;
-}
-export namespace ApiTypes {
-    export interface UserInfo {
-        server: string;
-        last_activity: Date;
-        roles: string[];
-        groups: string[];
-        name: string;
-        admin: boolean;
-        pending: null | 'spawn';
-        servers: Record<
-            string,
-            {
-                name: string;
-                last_activity: Date;
-                started: Date;
-                pending: null | 'spawn';
-                ready: boolean;
-                stopped: boolean;
-                url: string;
-                user_options: {};
-                progress_url: string;
-            }
-        >;
-        session_id: string;
-        scopes: string[];
-    }
+export interface IAuthenticator {
+    getJupyterAuthInfo(
+        options: {
+            baseUrl: string;
+            authInfo: {
+                username: string;
+                password: string;
+                token: string;
+            };
+        },
+        token: CancellationToken
+    ): Promise<{ token: string; tokenId?: string }>;
 }

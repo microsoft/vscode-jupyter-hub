@@ -19,9 +19,10 @@ import { workspace } from 'vscode';
 import { Localized } from './common/localize';
 import { SimpleFetch } from './common/request';
 import { createServerConnectSettings, getUserInfo, startServer } from './jupyterHubApi';
-import { IAuthenticator } from './authenticators/types';
+import { IAuthenticator } from './types';
 import { StopWatch } from './common/stopwatch';
 import { ISpecModels } from '@jupyterlab/services/lib/kernelspec/restapi';
+import { solveCertificateProblem } from './common/telemetry';
 
 const TIMEOUT_FOR_SESSION_MANAGER_READY = 10_000;
 
@@ -92,14 +93,12 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
                     }
                 } catch (err) {
                     if (isSelfCertsError(err)) {
-                        // sendTelemetryEvent(Telemetry.ConnectRemoteSelfCertFailedJupyter);
                         const handled = await handleSelfCertsError(err.message);
                         if (handled) {
                             // Try again, there could be other errors.
                             return await this.validateJupyterUri(baseUrl, authInfo, authenticator, token);
                         }
                     } else if (isSelfCertsExpiredError(err)) {
-                        // sendTelemetryEvent(Telemetry.ConnectRemoteSelfCertFailedJupyter);
                         const handled = await handleExpiredCertsError(err.message);
                         if (handled) {
                             // Try again, there could be other errors.
@@ -269,13 +268,13 @@ export async function handleSelfCertsError(message: string): Promise<boolean> {
         closeOption
     );
     if (value === enableOption) {
-        // sendTelemetryEvent(Telemetry.SelfCertsMessageEnabled);
+        solveCertificateProblem('self-signed', 'allow');
         await workspace
             .getConfiguration('jupyter')
             .update('allowUnauthorizedRemoteConnection', true, ConfigurationTarget.Workspace);
         return true;
-    } else if (value === closeOption) {
-        // sendTelemetryEvent(Telemetry.SelfCertsMessageClose);
+    } else {
+        solveCertificateProblem('self-signed', 'cancel');
     }
     return false;
 }
@@ -303,13 +302,13 @@ export async function handleExpiredCertsError(message: string): Promise<boolean>
         closeOption
     );
     if (value === enableOption) {
-        // sendTelemetryEvent(Telemetry.SelfCertsMessageEnabled);
+        solveCertificateProblem('expired', 'allow');
         await workspace
             .getConfiguration('jupyter')
             .update('allowUnauthorizedRemoteConnection', true, ConfigurationTarget.Workspace);
         return true;
-    } else if (value === closeOption) {
-        // sendTelemetryEvent(Telemetry.SelfCertsMessageClose);
+    } else {
+        solveCertificateProblem('expired', 'cancel');
     }
     return false;
 }
