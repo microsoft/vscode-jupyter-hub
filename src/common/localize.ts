@@ -14,9 +14,7 @@ export namespace Localized {
     export const captureUserNameTitle = 'Enter your user name';
     export const captureUserNamePrompt = 'user name';
     export const capturePasswordTitle = 'Enter your password or API token';
-    export const captureAPITokenTitle = 'Enter your API token';
     export const capturePasswordPrompt = 'password or token';
-    export const captureAITokenPrompt = 'token';
     export const usernamePasswordAuthFailure = l10n.t('Invalid username or password.');
     export const jupyterSelfCertFail = (errorMessage: string) =>
         l10n.t(
@@ -36,22 +34,13 @@ export namespace Localized {
     );
     export const jupyterSelfCertEnable = l10n.t('Yes, connect anyway');
     export const jupyterSelfCertClose = l10n.t('No, close the connection');
-    export const connectToToTheJupyterServer = (url: string) =>
-        new URL(url).protocol.toLowerCase() === 'http:'
-            ? l10n.t('Connect over insecure connection {0}', url)
-            : l10n.t('Connect to the JupyterHub server {0}', url);
+    export const connectToToTheJupyterServer = (url: string) => l10n.t('Connect to the JupyterHub server {0}', url);
     export const jupyterSelectURIInvalidURI = l10n.t('Invalid Url specified');
     export const invalidJupyterHubUrl = l10n.t('Invalid JupyterHub Url specified');
     export const jupyterRenameServer = l10n.t('Change Server Display Name (Leave Blank To Use Url)');
     export const remoteJupyterConnectionFailedWithoutServerWithError = (errorMessage: string) =>
         l10n.t('Connection failure. Verify the server is running and reachable. ({0}).', errorMessage);
-    export const remoteJupyterConnectionFailedWithoutServerWithErrorWeb = (errorMessage: string) =>
-        l10n.t(
-            'Connection failure. Verify the server is running and reachable from a browser. ({0}). \nWhen connecting from vscode.dev Jupyter servers must be started with specific options to connect. \nClick [here](https://aka.ms/vscjremoteweb) for more information.',
-            errorMessage
-        );
     export const emptyUserNameErrorMessage = l10n.t('Username cannot be empty');
-    export const emptyPasswordErrorMessage = l10n.t('Password cannot be empty');
-    export const emptyAPITokenErrorMessage = l10n.t('API token cannot be empty');
+    export const emptyPasswordErrorMessage = l10n.t('Password/API token cannot be empty');
     export const authMethodApiTokenMoreInfoTooltip = l10n.t('More Info');
 }

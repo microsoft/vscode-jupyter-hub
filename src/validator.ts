@@ -18,7 +18,7 @@ import { IJupyterHubConnectionValidator } from './types';
 import { workspace } from 'vscode';
 import { Localized } from './common/localize';
 import { SimpleFetch } from './common/request';
-import { JupyterHubApi, createServerConnectSettings, getHubApiUrl } from './jupyterHubApi';
+import { createServerConnectSettings, getUserInfo, startServer } from './jupyterHubApi';
 import { IAuthenticator } from './authenticators/types';
 import { StopWatch } from './common/stopwatch';
 import { ISpecModels } from '@jupyterlab/services/lib/kernelspec/restapi';
@@ -32,6 +32,7 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
         authInfo: {
             username: string;
             password: string;
+            token: string;
         },
         authenticator: IAuthenticator,
         mainCancel: CancellationToken
@@ -50,12 +51,9 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
                 disposable.add(progressCancel.onCancellationRequested(() => masterCancel.cancel()));
                 try {
                     // Check if the server is running.
-                    const didStartServer = await this.startIfServerNotStarted(
-                        baseUrl,
-                        authInfo,
-                        authenticator,
-                        token
-                    ).catch((ex) => traceError(`Failed to start server`, ex));
+                    const didStartServer = await this.startIfServerNotStarted(baseUrl, authInfo, token).catch((ex) =>
+                        traceError(`Failed to start server`, ex)
+                    );
                     const started = new StopWatch();
                     // Get the auth information again, as the previously held auth information does not seem to work when starting a jupyter server
                     const jupyterAuth = await authenticator.getJupyterAuthInfo({ baseUrl, authInfo }, token);
@@ -68,7 +66,7 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
                         // throw if can't connect.
                         const settings = createServerConnectSettings(
                             baseUrl,
-                            { username: authInfo.username, headers: jupyterAuth.headers, token: jupyterAuth.token },
+                            { username: authInfo.username, token: jupyterAuth.token },
                             this.fetch.requestCreator
                         );
                         const gotKernelSpecs = await getKernelSpecs(settings, token);
@@ -115,36 +113,21 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
             }
         );
     }
+    /**
+     * If the Jupyter (lab/notebook) server has not already been started, then start it.
+     * This is required, else we cannot connect to it (after all without a Jupyter Server running, there's nothing to connect to)
+     */
     private async startIfServerNotStarted(
         baseUrl: string,
         authInfo: {
             username: string;
             password: string;
-            headers?: Record<string, string>;
-            token?: string;
+            token: string;
         },
-        authenticator: IAuthenticator,
         token: CancellationToken
     ) {
-        if (!authenticator.getHubApiAuthInfo) {
-            return;
-        }
-        const auth = await authenticator.getHubApiAuthInfo({ authInfo, baseUrl }, token);
-        if (!auth) {
-            traceError(`Failed to get auth info`);
-            return;
-        }
-        const api = new JupyterHubApi(
-            getHubApiUrl(baseUrl),
-            {
-                username: authInfo.username,
-                headers: auth.headers,
-                token: auth.token
-            },
-            this.fetch
-        );
         try {
-            const status = await api.getUserInfo(token);
+            const status = await getUserInfo(baseUrl, authInfo.username, authInfo.token, this.fetch, token);
             if (status.server) {
                 return;
             }
@@ -153,15 +136,13 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
             return;
         }
 
-        await api
-            .startServer(token)
-            .catch((ex) =>
-                ex instanceof CancellationError ? undefined : traceError(`Failed to start the Jupyter Server`, ex)
-            );
+        await startServer(baseUrl, authInfo.username, authInfo.token, this.fetch, token).catch((ex) =>
+            ex instanceof CancellationError ? undefined : traceError(`Failed to start the Jupyter Server`, ex)
+        );
         try {
             const started = Date.now();
             while (true) {
-                const status = await api.getUserInfo(token);
+                const status = await getUserInfo(baseUrl, authInfo.username, authInfo.token, this.fetch, token);
                 if (status.server) {
                     return 'didStartServer';
                 }

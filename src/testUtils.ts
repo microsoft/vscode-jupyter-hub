@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-import { BaseCookieStore } from './common/cookieStore.base';
 import { ClassType } from './common/types';
 import { IJupyterRequestCreator } from './types';
 
@@ -12,5 +11,4 @@ import { IJupyterRequestCreator } from './types';
 
 export type ClassImplementationsForTests = {
     RequestCreator: ClassType<IJupyterRequestCreator>;
-    CookieStore: ClassType<BaseCookieStore>;
 };

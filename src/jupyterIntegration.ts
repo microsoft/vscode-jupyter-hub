@@ -2,51 +2,44 @@
 // Licensed under the MIT License.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { CancellationError, CancellationToken, Disposable, EventEmitter, Uri } from 'vscode';
-import type { Jupyter, JupyterServer, JupyterServerCommand } from '@vscode/jupyter-extension';
+import { CancellationError, CancellationToken, CancellationTokenSource, Disposable, EventEmitter, Uri } from 'vscode';
+import type {
+    Jupyter,
+    JupyterServer,
+    JupyterServerCommand,
+    JupyterServerCommandProvider,
+    JupyterServerProvider
+} from '@vscode/jupyter-extension';
 import { Localized } from './common/localize';
-import { traceError } from './common/logging';
+import { traceDebug, traceError } from './common/logging';
 import { dispose } from './common/lifecycle';
 import { JupyterHubServerStorage } from './storage';
 import { SimpleFetch } from './common/request';
 import { JupyterHubUrlCapture } from './urlCapture';
-import { BaseCookieStore } from './common/cookieStore.base';
-import { ClassType } from './common/types';
 import { NewAuthenticator } from './authenticators/authenticator';
-import { OldUserNamePasswordAuthenticator } from './authenticators/passwordConnect';
-import { IAuthenticator } from './authenticators/types';
-import { getJupyterUrl } from './jupyterHubApi';
+import { deleteApiToken, getJupyterUrl } from './jupyterHubApi';
+import { noop } from './common/utils';
 
 export const UserJupyterServerUriListKey = 'user-jupyter-server-uri-list';
 export const UserJupyterServerUriListKeyV2 = 'user-jupyter-server-uri-list-version2';
 export const UserJupyterServerUriListMementoKey = '_builtin.jupyterServerUrlProvider.uriList';
 
-export class JupyterServerIntegration {
+export class JupyterServerIntegration implements JupyterServerProvider, JupyterServerCommandProvider {
     readonly id: string = 'UserJupyterServerPickerProviderId';
-    public readonly extensionId: string = 'JVSC_EXTENSION_ID';
     readonly documentation = Uri.parse('https://aka.ms/vscodeJuptyerExtKernelPickerExistingServer');
-    private readonly oldAuthenticator: OldUserNamePasswordAuthenticator;
     private readonly newAuthenticator: NewAuthenticator;
     private readonly disposables: Disposable[] = [];
     private readonly _onDidChangeServers = new EventEmitter<void>();
     public readonly onDidChangeServers = this._onDidChangeServers.event;
     private previouslyEnteredUrlTypedIntoQuickPick?: string;
     private previouslyEnteredJupyterServerBasedOnUrlTypedIntoQuickPick?: JupyterServer;
-    public get commands(): JupyterServerCommand[] {
-        return [{ label: Localized.labelOfCommandToEnterUrl }];
-    }
     constructor(
-        fetch: SimpleFetch,
+        private readonly fetch: SimpleFetch,
         private readonly jupyterApi: Jupyter,
         private readonly storage: JupyterHubServerStorage,
-        private readonly urlCapture: JupyterHubUrlCapture,
-        CookieStore: ClassType<BaseCookieStore>
+        private readonly urlCapture: JupyterHubUrlCapture
     ) {
-        this.oldAuthenticator = new OldUserNamePasswordAuthenticator(fetch);
-        this.disposables.push(this.oldAuthenticator);
-        this.newAuthenticator = new NewAuthenticator(fetch, CookieStore);
-        this.disposables.push(this.newAuthenticator);
-
+        this.newAuthenticator = new NewAuthenticator(fetch);
         const collection = this.jupyterApi.createJupyterServerCollection(
             this.id,
             Localized.KernelActionSourceTitle,
@@ -132,8 +125,27 @@ export class JupyterServerIntegration {
         return [{ label: Localized.labelOfCommandToEnterUrl }];
     }
     async removeJupyterServer?(server: JupyterServer): Promise<void> {
-        await this.storage.removeServer(server.id);
-        this._onDidChangeServers.fire();
+        const tokenSource = new CancellationTokenSource();
+        try {
+            const serverInfo = this.storage.all.find((s) => s.id === server.id);
+            const authInfo = await this.storage.getCredentials(server.id).catch(noop);
+            if (serverInfo && authInfo?.token && authInfo.tokenId) {
+                // Delete the token that we created (we no longer need this).
+                await deleteApiToken(
+                    serverInfo.baseUrl,
+                    authInfo.username,
+                    authInfo.tokenId,
+                    authInfo.token,
+                    this.fetch,
+                    tokenSource.token
+                ).catch((ex) => traceDebug(`Failed to delete token ${server.id}`, ex));
+            }
+            await this.storage.removeServer(server.id);
+        } catch (ex) {
+            traceDebug(`Failed to remove server ${server.id}`, ex);
+        } finally {
+            this._onDidChangeServers.fire();
+        }
     }
     async provideJupyterServers(_token: CancellationToken): Promise<JupyterServer[]> {
         return this.storage.all.map((s) => {
@@ -157,31 +169,53 @@ export class JupyterServerIntegration {
         }
         return this.cachedOfAuthInfo.get(server.id)!;
     }
-    public async resolveJupyterServerImpl(server: JupyterServer, token: CancellationToken): Promise<JupyterServer> {
+    public async resolveJupyterServerImpl(
+        server: JupyterServer,
+        cancelToken: CancellationToken
+    ): Promise<JupyterServer> {
         const serverInfo = this.storage.all.find((s) => s.id === server.id);
         if (!serverInfo) {
             throw new Error('Server not found');
         }
         const authInfo = await this.storage.getCredentials(server.id);
-        const authenticator: IAuthenticator =
-            serverInfo.authProvider === 'old' ? this.oldAuthenticator : this.newAuthenticator;
-        const result = await authenticator.getJupyterAuthInfo(
-            {
-                baseUrl: serverInfo.baseUrl,
-                authInfo: {
-                    username: authInfo?.username || '',
-                    password: authInfo?.password || ''
-                }
-            },
-            token
+        if (!authInfo) {
+            throw new Error(`Server ${server.id} not found`);
+        }
+
+        const baseUrl = Uri.parse(getJupyterUrl(serverInfo.baseUrl, authInfo?.username || ''));
+
+        const result = await this.newAuthenticator.getJupyterAuthInfo(
+            { baseUrl: serverInfo.baseUrl, authInfo },
+            cancelToken
         );
+
+        if (result.tokenId && authInfo?.token !== result.token) {
+            // If we have ended up with a new token, (happens if th old token expired)
+            // Then save the updated token information.
+            try {
+                await this.storage.addServerOrUpdate(
+                    {
+                        baseUrl: serverInfo.baseUrl,
+                        displayName: serverInfo.displayName,
+                        id: serverInfo.id
+                    },
+                    {
+                        password: authInfo.password || '',
+                        username: authInfo.username || '',
+                        token: result.token,
+                        tokenId: result.tokenId
+                    }
+                );
+            } catch (ex) {
+                traceError(`Failed to update server with the latest token information ${server.id}`, ex);
+            }
+        }
 
         return {
             ...server,
             connectionInformation: {
-                baseUrl: Uri.parse(getJupyterUrl(serverInfo.baseUrl, authInfo?.username || '')),
-                token: result?.token,
-                headers: result?.headers
+                baseUrl,
+                token: result.token
             }
         };
     }

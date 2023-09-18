@@ -18,7 +18,6 @@ export interface IJupyterRequestCreator {
 }
 
 export type JupyterHubServer = {
-    authProvider: 'old' | 'new';
     id: string;
     baseUrl: string;
     displayName: string;
