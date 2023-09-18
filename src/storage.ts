@@ -13,7 +13,9 @@ function getAuthInfoKey(serverId: string) {
 }
 type Credentials = {
     username: string;
-    password: string;
+    password: string; // Required to re-generate the token.
+    token: string; // Generated using Hub REST API, this api token is used for connecting to Jupyter by Jupyter Extension.
+    tokenId: string; // Requried when we want to delete the token using the Hub REST API.
 };
 
 export class JupyterHubServerStorage implements IJupyterHubServerStorage {
@@ -28,14 +30,15 @@ export class JupyterHubServerStorage implements IJupyterHubServerStorage {
         this.disposable.dispose();
     }
     public get all(): {
-        authProvider: 'old' | 'new';
         id: string;
         baseUrl: string;
         displayName: string;
     }[] {
         return this.globalMemento.get<JupyterHubServer[]>(serverListStorageKey, []);
     }
-    public async getCredentials(serverId: string): Promise<{ username: string; password: string } | undefined> {
+    public async getCredentials(
+        serverId: string
+    ): Promise<{ username: string; password: string; token: string; tokenId: string } | undefined> {
         try {
             const js = await this.secrets.get(getAuthInfoKey(serverId));
             if (!js) {
@@ -48,8 +51,8 @@ export class JupyterHubServerStorage implements IJupyterHubServerStorage {
         }
     }
     public async addServerOrUpdate(
-        server: { authProvider: 'old' | 'new'; id: string; baseUrl: string; displayName: string },
-        auth: { username: string; password: string }
+        server: { id: string; baseUrl: string; displayName: string },
+        auth: { username: string; password: string; token: string; tokenId: string }
     ) {
         await Promise.all([
             this.globalMemento.update(serverListStorageKey, this.all.filter((s) => s.id !== server.id).concat(server)),

@@ -5,71 +5,11 @@ import { CancellationToken, workspace } from 'vscode';
 import { SimpleFetch } from './common/request';
 import { IJupyterRequestCreator, ApiTypes } from './types';
 import { ServerConnection } from '@jupyterlab/services';
-import { traceError } from './common/logging';
+import { traceDebug, traceError } from './common/logging';
 import { appendUrlPath } from './utils';
 import { noop } from './common/utils';
+import { trackUsageOfOldApiGeneration } from './common/telemetry';
 
-export class JupyterHubApi {
-    constructor(
-        private readonly baseUrl: string,
-        private readonly auth: {
-            username: string;
-            headers?: Record<string, string>;
-            token?: string;
-        },
-        private readonly fetch: SimpleFetch
-    ) {}
-    private async getErrorMessageToThrow(message: string, response: Response) {
-        let responseText = '';
-        try {
-            responseText = await response.text();
-        } catch (ex) {
-            traceError(`Error fetching text from response ${ex} to log error ${message}`);
-        }
-        return `${message}, ${response.statusText} (${response.status}) with message  ${responseText}`;
-    }
-    private get(url: string, token: CancellationToken): Promise<Response> {
-        return this.fetch.send(
-            appendUrlPath(this.baseUrl, url),
-            {
-                method: 'get',
-                headers: { Connection: 'keep-alive', ...(this.auth.headers || {}) }
-            },
-            token
-        );
-    }
-    private post(url: string, body: string | undefined, token: CancellationToken): Promise<Response> {
-        return this.fetch.send(
-            appendUrlPath(this.baseUrl, url),
-            {
-                method: 'post',
-                headers: { Connection: 'keep-alive', ...(this.auth.headers || {}) },
-                body
-            },
-            token
-        );
-    }
-    public async getVersion(): Promise<string> {
-        return '1.0.0';
-    }
-    public hasServerStarted(): Promise<boolean> {
-        return Promise.resolve(true);
-    }
-    public async getUserInfo(token: CancellationToken): Promise<ApiTypes.UserInfo> {
-        const response = await this.get('user', token);
-        if (response.status === 200) {
-            return response.json();
-        }
-        throw new Error(await this.getErrorMessageToThrow(`Failed to fetch user info`, response));
-    }
-    public async startServer(token: CancellationToken): Promise<void> {
-        const response = await this.post(`users/${this.auth.username}/server`, undefined, token);
-        if (response.status === 201 || response.status === 202) {
-            return;
-        }
-        throw new Error(await this.getErrorMessageToThrow(`Failed to fetch user info`, response));
-    }
-}
 export async function getVersion(url: string, fetch: SimpleFetch, token: CancellationToken): Promise<string> {
     // Otherwise request hub/api. This should return the json with the hub version
     // if this is a hub url
@@ -89,12 +29,129 @@ export async function getVersion(url: string, fetch: SimpleFetch, token: Cancell
     throw new Error(`Invalid Jupyter Hub Url ${url} (failed to get version).`);
 }
 
+export async function deleteApiToken(
+    baseUrl: string,
+    username: string,
+    tokenId: string,
+    token: string,
+    fetch: SimpleFetch,
+    cancellationToken: CancellationToken
+) {
+    const url = appendUrlPath(
+        baseUrl,
+        `hub/api/users/${encodeURIComponent(username)}/tokens/${encodeURIComponent(tokenId)}`
+    );
+    const options = { method: 'DELETE', headers: { Authorization: `token ${token}` } };
+    await fetch.send(url, options, cancellationToken);
+}
+export async function verifyApiToken(
+    baseUrl: string,
+    username: string,
+    token: string,
+    fetch: SimpleFetch,
+    cancellationToken: CancellationToken
+) {
+    try {
+        await getUserInfo(baseUrl, username, token, fetch, cancellationToken);
+        return true;
+    } catch (ex) {
+        // Capture errors, with CORS we can get an error here even if the token is valid.
+        traceDebug(`Token is no longer valid`, ex);
+        return false;
+    }
+}
+
+export async function generateNewApiToken(
+    baseUrl: string,
+    username: string,
+    password: string,
+    fetch: SimpleFetch,
+    cancellationToken: CancellationToken
+): Promise<{ token: string; tokenId: string }> {
+    try {
+        const url = appendUrlPath(baseUrl, `hub/api/users/${encodeURIComponent(username)}/tokens`);
+        const body = {
+            auth: { username: username, password: password },
+            note: `Requested by JupyterHub extension in VSCode`
+        };
+        type ResponseType = { user: string; id: string; token: string };
+        const response = await fetch.send(url, { method: 'POST', body: JSON.stringify(body) }, cancellationToken);
+        const json = (await response.json()) as ResponseType;
+        return { token: json.token, tokenId: json.id };
+    } catch (ex) {
+        traceError(`Failed to generate token, trying old way`, ex);
+        return generateNewApiTokenOldWay(baseUrl, username, password, fetch, cancellationToken);
+    }
+}
+
+export async function generateNewApiTokenOldWay(
+    baseUrl: string,
+    username: string,
+    password: string,
+    fetch: SimpleFetch,
+    cancellationToken: CancellationToken
+): Promise<{ token: string; tokenId: string }> {
+    try {
+        const url = appendUrlPath(baseUrl, `hub/api/authorizations/token`);
+        const body = { username: username, password: password };
+        type ResponseType = { user: {}; token: string };
+        const response = await fetch.send(url, { method: 'POST', body: JSON.stringify(body) }, cancellationToken);
+        const json = (await response.json()) as ResponseType;
+        if (json.token) {
+            trackUsageOfOldApiGeneration(baseUrl);
+            return { token: json.token, tokenId: '' };
+        }
+        throw new Error('Unable to generate Token using the old api route');
+    } catch (ex) {
+        traceError(`Failed to generate token, trying old way`, ex);
+        throw ex;
+    }
+}
+export async function getUserInfo(
+    baseUrl: string,
+    username: string,
+    token: string,
+    fetch: SimpleFetch,
+    cancellationToken: CancellationToken
+): Promise<ApiTypes.UserInfo> {
+    const url = appendUrlPath(baseUrl, `hub/api/users/${encodeURIComponent(username)}`);
+    const headers = { Authorization: `token ${token}` };
+    const response = await fetch.send(url, { method: 'GET', headers }, cancellationToken);
+    if (response.status === 200) {
+        return response.json();
+    }
+    throw new Error(await getResponseErrorMessageToThrow(`Failed to get user info`, response));
+}
+export async function startServer(
+    baseUrl: string,
+    username: string,
+    token: string,
+    fetch: SimpleFetch,
+    cancellationToken: CancellationToken
+): Promise<void> {
+    const url = appendUrlPath(baseUrl, `hub/api/users/${encodeURIComponent(username)}/server`);
+    const headers = { Authorization: `token ${token}` };
+    const response = await fetch.send(url, { method: 'POST', headers }, cancellationToken);
+    if (response.status === 201 || response.status === 202) {
+        return;
+    }
+    throw new Error(await getResponseErrorMessageToThrow(`Failed to fetch user info`, response));
+}
+async function getResponseErrorMessageToThrow(message: string, response: Response) {
+    let responseText = '';
+    try {
+        responseText = await response.text();
+    } catch (ex) {
+        traceError(`Error fetching text from response ${ex} to log error ${message}`);
+    }
+    return `${message}, ${response.statusText} (${response.status}) with message  ${responseText}`;
+}
+
 export function createServerConnectSettings(
     baseUrl: string,
     authInfo: {
         username: string;
-        headers?: Record<string, string>;
-        token?: string;
+        token: string;
     },
     requestCreator: IJupyterRequestCreator
 ): ServerConnection.ISettings {
@@ -105,17 +162,12 @@ export function createServerConnectSettings(
         // A web socket is required to allow token authentication
         wsUrl: baseUrl.replace('http', 'ws')
     };
-    const authHeader =
-        authInfo.headers && Object.keys(authInfo?.headers ?? {}).length > 0 ? authInfo.headers : undefined;
 
     // Agent is allowed to be set on this object, but ts doesn't like it on RequestInit, so any
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let requestInit: any = requestCreator.getRequestInit();
 
-    const isTokenEmpty = authInfo.token === '' || authInfo.token === 'null';
-    if (!isTokenEmpty || authHeader) {
-        serverSettings = { ...serverSettings, token: authInfo.token || '', appendToken: true };
-    }
+    serverSettings = { ...serverSettings, token: authInfo.token, appendToken: true };
 
     const allowUnauthorized = workspace
         .getConfiguration('jupyter')
@@ -134,7 +186,7 @@ export function createServerConnectSettings(
         ...serverSettings,
         init: requestInit,
         fetch: requestCreator.getFetchMethod(),
-        Request: requestCreator.getRequestCtor(authHeader ? () => authHeader : undefined),
+        Request: requestCreator.getRequestCtor(undefined),
         Headers: requestCreator.getHeadersCtor()
     };
 
@@ -143,25 +195,6 @@ export function createServerConnectSettings(
 
 export function getJupyterUrl(baseUrl: string, username: string) {
     return appendUrlPath(baseUrl, `user/${encodeURIComponent(username)}/`);
-}
-export function getHubApiUrl(baseUrl: string) {
-    return appendUrlPath(baseUrl, `hub/api`);
-}
-export function getJupyterLogoutUrl(baseUrl: string, username: string) {
-    return appendUrlPath(baseUrl, `user/${encodeURIComponent(username)}/logout`);
-}
-export function getUserApiTokenUrl(baseUrl: string, username: string, tokenId: string) {
-    return appendUrlPath(
-        baseUrl,
-        `hub/api/users/${encodeURIComponent(username)}/tokens/${encodeURIComponent(tokenId)}`
-    );
-}
-export function getApiTokenGenerationUrl(baseUrl: string, username: string) {
-    return appendUrlPath(baseUrl, `hub/api/users/${encodeURIComponent(username)}/tokens`);
-}
-
-export function getHubLogoutUrl(baseUrl: string) {
-    return appendUrlPath(baseUrl, `hub/logout`);
 }
 
 // Caching is faster than making a http request every single time.

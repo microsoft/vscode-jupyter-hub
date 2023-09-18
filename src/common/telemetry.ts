@@ -71,3 +71,11 @@ export function publicLog2<E extends ClassifiedEvent<OmitMetadata<T>> = never, T
         : disposableStore.add(new TelemetryReporter(AppInsightsKey));
     telemetryReporter.sendTelemetryEvent(eventName, data);
 }
+
+const urlsAndVersion = new Map<string, string>();
+export function sendJupyterHubVersion(baseUrl: string, version: string, _serverId: string) {
+    urlsAndVersion.set(baseUrl, version);
+}
+export function trackUsageOfOldApiGeneration(_baseUrl: string) {
+    //
+}

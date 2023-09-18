@@ -11,32 +11,22 @@ import { JupyterHubConnectionValidator, isSelfCertsError, isSelfCertsExpiredErro
 import { WorkflowInputCapture } from './common/inputCapture';
 import { JupyterHubServerStorage } from './storage';
 import { SimpleFetch } from './common/request';
-import { BaseCookieStore } from './common/cookieStore.base';
-import { ClassType } from './common/types';
-import { AuthenticationNotSupportedError, IAuthenticator } from './authenticators/types';
-import { OldUserNamePasswordAuthenticator } from './authenticators/passwordConnect';
+import { IAuthenticator } from './authenticators/types';
 import { NewAuthenticator } from './authenticators/authenticator';
-import { extractUserNameFromUrl, getJupyterHubBaseUrl } from './jupyterHubApi';
+import { extractUserNameFromUrl, getJupyterHubBaseUrl, getVersion } from './jupyterHubApi';
 import { isWebExtension } from './utils';
+import { sendJupyterHubVersion } from './common/telemetry';
 
-class AuthenticationError extends Error {
-    constructor(public readonly ex: Error) {
-        super(ex.message || ex.toString());
-    }
-}
 export class JupyterHubUrlCapture {
     private readonly jupyterConnection: JupyterHubConnectionValidator;
     private readonly displayNamesOfHandles = new Map<string, string>();
-    private readonly oldAuthenticator: OldUserNamePasswordAuthenticator;
     private readonly newAuthenticator: NewAuthenticator;
     private readonly disposable = new DisposableStore();
     constructor(
         private readonly fetch: SimpleFetch,
-        private readonly storage: JupyterHubServerStorage,
-        CookieStore: ClassType<BaseCookieStore>
+        private readonly storage: JupyterHubServerStorage
     ) {
-        this.oldAuthenticator = this.disposable.add(new OldUserNamePasswordAuthenticator(fetch));
-        this.newAuthenticator = this.disposable.add(new NewAuthenticator(fetch, CookieStore));
+        this.newAuthenticator = new NewAuthenticator(fetch);
         this.jupyterConnection = new JupyterHubConnectionValidator(fetch);
     }
     dispose() {
@@ -50,76 +40,15 @@ export class JupyterHubUrlCapture {
         serverId = uuid(),
         reasonForCapture: 'cameHereFromBackButton' | 'captureNewUrl' = 'captureNewUrl'
     ): Promise<JupyterServer | undefined> {
-        // First try the new auth class, then if that fails try the old authentication mechanism.
-        const authenticators = [this.oldAuthenticator];
-        let authenticator: IAuthenticator = this.newAuthenticator;
-        let fallbackToOldAuthenticator = true;
-        const resetAndGetNextAuthenticator = () => {
-            if (!fallbackToOldAuthenticator) {
-                return this.newAuthenticator;
-            }
-            // Previous authenticator did not work, try the next one.
-            const nextAuth = authenticators.shift();
-            if (!nextAuth) {
-                authenticators.push(this.oldAuthenticator);
-                return this.newAuthenticator;
-            } else {
-                return nextAuth;
-            }
-        };
-        let errorMessageWhenAuthFirstFailed = '';
         try {
-            while (true) {
-                try {
-                    return await this.captureRemoteJupyterUrlImpl(
-                        authenticator,
-                        initialUrl,
-                        displayName,
-                        validationErrorMessage,
-                        serverId,
-                        reasonForCapture,
-                        token
-                    );
-                } catch (ex) {
-                    if (ex instanceof CancellationError) {
-                        throw ex;
-                    } else if (ex instanceof AuthenticationNotSupportedError) {
-                        // This is throw by the old authenticator class,
-                        // If we get this error that means both new and old auth failed.
-                        // Lets try again without falling back to any other authenticator.
-                        fallbackToOldAuthenticator = false;
-                        authenticator = this.newAuthenticator;
-                        continue;
-                    } else if (ex instanceof AuthenticationError || ex instanceof AuthenticationError) {
-                        // Auth failed, keep track of this and try the next authenticator with the same user name & pwd info.
-                        errorMessageWhenAuthFirstFailed = errorMessageWhenAuthFirstFailed || ex.message;
-                        const nextAuth = authenticators.shift();
-                        if (!nextAuth) {
-                            // We have exhausted all auth providers,
-                            // Now lets display the first error message we got with the first auth provider
-
-                            const urlRegex = /(https?:\/\/[^\s]+)/g;
-                            const errorMessage = errorMessageWhenAuthFirstFailed.replace(
-                                urlRegex,
-                                (url: string) => `[${url}](${url})`
-                            );
-                            validationErrorMessage = (
-                                isWebExtension()
-                                    ? Localized.remoteJupyterConnectionFailedWithoutServerWithErrorWeb
-                                    : Localized.remoteJupyterConnectionFailedWithoutServerWithError
-                            )(errorMessage);
-
-                            errorMessageWhenAuthFirstFailed = '';
-                            authenticator = resetAndGetNextAuthenticator();
-                        } else {
-                            // Try the next authenticator.
-                            validationErrorMessage = '';
-                            authenticator = nextAuth;
-                        }
-                        continue;
-                    }
-                }
-            }
+            return await this.captureRemoteJupyterUrlImpl(
+                initialUrl,
+                displayName,
+                validationErrorMessage,
+                serverId,
+                reasonForCapture,
+                token
+            );
         } catch (ex) {
             if (!(ex instanceof CancellationError)) {
                 traceError('Failed to capture remote jupyter server', ex);
@@ -128,7 +57,6 @@ export class JupyterHubUrlCapture {
         }
     }
     public async captureRemoteJupyterUrlImpl(
-        authenticator: IAuthenticator,
         url: string = '',
         displayName: string = '',
         validationErrorMessage: string = '',
@@ -136,19 +64,10 @@ export class JupyterHubUrlCapture {
         reasonForCapture: 'cameHereFromBackButton' | 'captureNewUrl' = 'captureNewUrl',
         token: CancellationToken
     ): Promise<JupyterServer | undefined> {
-        const steps: MultiStep<Step, State>[] = [
-            new GetUrlStep(this.fetch),
-            new GetUserName(),
-            new GetPassword(),
-            new GetHeadersAndCookies(authenticator),
-            new VerifyConnection(this.jupyterConnection, authenticator),
-            new GetDisplayName(this.storage)
-        ];
-        const disposables = new DisposableStore();
-        let nextStep: Step | undefined = 'Get Url';
         const state: State = {
-            auth: { username: '', password: '' },
+            auth: { username: '', password: '', token: '', tokenId: '' },
             baseUrl: '',
+            hubVersion: '',
             urlWasPrePopulated: false,
             url,
             displayName,
@@ -156,11 +75,22 @@ export class JupyterHubUrlCapture {
             errorMessage: validationErrorMessage,
             serverId: id
         };
+        const steps: MultiStep<Step, State>[] = [
+            new GetUrlStep(this.fetch),
+            new GetUserName(),
+            new GetPassword(this.newAuthenticator),
+            new VerifyConnection(this.jupyterConnection, this.newAuthenticator),
+            new GetDisplayName(this.storage)
+        ];
+        const disposables = new DisposableStore();
+        let nextStep: Step | undefined = 'Get Url';
         if (url) {
             // Validate the URI first, which would otherwise be validated when user enters the Uri into the input box.
             if (isValidUrl(url)) {
                 try {
                     state.baseUrl = await getJupyterHubBaseUrl(url, this.fetch, token);
+                    const version = await getVersion(state.baseUrl, this.fetch, token);
+                    state.hubVersion = version;
                     state.urlWasPrePopulated = true;
                     nextStep = reasonForCapture === 'captureNewUrl' ? 'Get Username' : 'Get Url';
                 } catch {
@@ -185,16 +115,18 @@ export class JupyterHubUrlCapture {
                     return;
                 }
                 if (nextStep === 'After') {
+                    sendJupyterHubVersion(state.baseUrl, state.hubVersion, id);
                     await this.storage.addServerOrUpdate(
                         {
-                            authProvider: authenticator === this.oldAuthenticator ? 'old' : 'new',
                             id,
                             baseUrl: state.baseUrl,
                             displayName: state.displayName
                         },
                         {
                             username: state.auth.username,
-                            password: state.auth.password
+                            password: state.auth.password,
+                            token: state.auth.token,
+                            tokenId: state.auth.tokenId
                         }
                     );
                     return {
@@ -231,15 +163,7 @@ export class JupyterHubUrlCapture {
         }
     }
 }
-type Step =
-    | 'Before'
-    | 'Get Url'
-    | 'Get Username'
-    | 'Get Password'
-    | 'Get Authentication Headers and Cookies'
-    | 'Verify Connection'
-    | 'Get Display Name'
-    | 'After';
+type Step = 'Before' | 'Get Url' | 'Get Username' | 'Get Password' | 'Verify Connection' | 'Get Display Name' | 'After';
 
 interface MultiStep<T, State> {
     step: Step;
@@ -255,7 +179,13 @@ type State = {
     url: string;
     displayName: string;
     baseUrl: string;
-    auth: { username: string; password: string; headers?: Record<string, string> };
+    hubVersion: string;
+    auth: {
+        username: string;
+        password: string;
+        token: string;
+        tokenId: string;
+    };
 };
 class GetUrlStep extends DisposableStore implements MultiStep<Step, State> {
     step: Step = 'Get Url';
@@ -305,6 +235,7 @@ class GetUrlStep extends DisposableStore implements MultiStep<Step, State> {
         }
         state.url = url;
         state.baseUrl = await getJupyterHubBaseUrl(url, this.fetch, token);
+        state.hubVersion = await getVersion(state.baseUrl, this.fetch, token);
         state.auth.username = state.auth.username || extractUserNameFromUrl(url) || '';
         return 'Get Username';
     }
@@ -335,6 +266,10 @@ class GetUserName extends DisposableStore implements MultiStep<Step, State> {
 class GetPassword extends DisposableStore implements MultiStep<Step, State> {
     step: Step = 'Get Password';
     canNavigateBackToThis = true;
+    constructor(private readonly authenticator: IAuthenticator) {
+        super();
+    }
+
     async run(state: State, token: CancellationToken): Promise<Step | undefined> {
         // In vscode.dev or the like, username/password auth doesn't work
         // as JupyterHub doesn't support CORS. So we need to use API tokens.
@@ -345,8 +280,8 @@ class GetPassword extends DisposableStore implements MultiStep<Step, State> {
         };
         const password = await input.getValue(
             {
-                title: isWebExtension() ? Localized.captureAPITokenTitle : Localized.capturePasswordTitle,
-                placeholder: isWebExtension() ? Localized.captureAITokenPrompt : Localized.capturePasswordPrompt,
+                title: Localized.capturePasswordTitle,
+                placeholder: Localized.capturePasswordPrompt,
                 password: true,
                 buttons: [moreInfo],
                 onDidTriggerButton: (e) => {
@@ -354,12 +289,36 @@ class GetPassword extends DisposableStore implements MultiStep<Step, State> {
                         env.openExternal(Uri.parse('https://aka.ms/vscjremoteweb')).then(noop, noop);
                     }
                 },
-                validateInput: async (value) =>
-                    value
-                        ? undefined
-                        : isWebExtension()
-                        ? Localized.emptyAPITokenErrorMessage
-                        : Localized.emptyPasswordErrorMessage
+                validateInput: async (value) => {
+                    if (!value) {
+                        return Localized.emptyPasswordErrorMessage;
+                    }
+                    try {
+                        const result = await this.authenticator.getJupyterAuthInfo(
+                            {
+                                baseUrl: state.baseUrl,
+                                authInfo: state.auth
+                            },
+                            token
+                        );
+                        state.auth.token = result.token || '';
+                        state.auth.tokenId = result.tokenId || '';
+                    } catch (err) {
+                        traceError('Failed to get Auth Info', err);
+                        if (err instanceof CancellationError) {
+                            throw err;
+                        } else if (isSelfCertsError(err)) {
+                            // We can skip this for now, as this will get verified again
+                            // First we need to check with user whether to allow insecure connections and untrusted certs.
+                        } else if (isSelfCertsExpiredError(err)) {
+                            // We can skip this for now, as this will get verified again
+                            // First we need to check with user whether to allow insecure connections and untrusted certs.
+                        } else {
+                            traceError(`Failed to validate user name and password for ${state.baseUrl}`, err);
+                            return Localized.usernamePasswordAuthFailure;
+                        }
+                    }
+                }
             },
             token
         );
@@ -367,52 +326,10 @@ class GetPassword extends DisposableStore implements MultiStep<Step, State> {
             return;
         }
         state.auth.password = password;
-        return 'Get Authentication Headers and Cookies';
-    }
-}
-
-class GetHeadersAndCookies extends DisposableStore implements MultiStep<Step, State> {
-    step: Step = 'Get Authentication Headers and Cookies';
-    canNavigateBackToThis = false;
-    constructor(private readonly authenticator: IAuthenticator) {
-        super();
-    }
-    async run(state: State, token: CancellationToken): Promise<Step | undefined> {
-        try {
-            const result = await this.authenticator.getJupyterAuthInfo(
-                {
-                    baseUrl: state.baseUrl,
-                    authInfo: state.auth
-                },
-                token
-            );
-            if (!result) {
-                // This only happens with the old auth class,
-                // If we're here, then this means both the old and new auth methods failed.
-                throw new AuthenticationNotSupportedError();
-            }
-
-            state.auth.headers = result.headers;
-        } catch (err) {
-            traceError('Failed to get Auth Info', err);
-            if (err instanceof AuthenticationNotSupportedError) {
-                throw err;
-            } else if (err instanceof CancellationError) {
-                throw err;
-            } else if (isSelfCertsError(err)) {
-                // We can skip this for now, as this will get verified again
-                // First we need to check with user whether to allow insecure connections and untrusted certs.
-            } else if (isSelfCertsExpiredError(err)) {
-                // We can skip this for now, as this will get verified again
-                // First we need to check with user whether to allow insecure connections and untrusted certs.
-            } else {
-                traceError(`Failed to validate user name and password for ${state.baseUrl}`, err);
-                throw new AuthenticationError(err);
-            }
-        }
         return 'Verify Connection';
     }
 }
+
 class VerifyConnection extends DisposableStore implements MultiStep<Step, State> {
     step: Step = 'Verify Connection';
     canNavigateBackToThis = false;

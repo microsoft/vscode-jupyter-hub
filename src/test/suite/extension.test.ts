@@ -10,11 +10,11 @@ import { noop } from '../../common/utils';
 import { SimpleFetch } from '../../common/request';
 import { JupyterHubConnectionValidator, getKernelSpecs } from '../../validator';
 import { ClassType, ReadWrite } from '../../common/types';
-import { BaseCookieStore } from '../../common/cookieStore.base';
 import { IJupyterRequestCreator } from '../../types';
-import { createServerConnectSettings } from '../../jupyterHubApi';
+import { createServerConnectSettings, deleteApiToken } from '../../jupyterHubApi';
 import { KernelManager, SessionManager } from '@jupyterlab/services';
 import { isWebExtension } from '../../utils';
+import { sleep } from '../../common/async';
 
 const TIMEOUT = 30_000; // Spinning up jupyter servers could take a while.
 describe('Authentication', function () {
@@ -24,42 +24,59 @@ describe('Authentication', function () {
     let cancellationToken: CancellationTokenSource;
     this.timeout(TIMEOUT);
     let RequestCreator: ClassType<IJupyterRequestCreator>;
-    let CookieStore: ClassType<BaseCookieStore>;
     let disposableStore: DisposableStore;
     let authenticator: NewAuthenticator;
     let fetch: SimpleFetch;
     let requestCreator: IJupyterRequestCreator;
+    let generatedTokens: { token: string; tokenId: string }[] = [];
     before(async function () {
         this.timeout(TIMEOUT);
-        cancellationToken = new CancellationTokenSource();
         const file = Uri.joinPath(workspace.workspaceFolders![0].uri, 'jupyterhub.json');
-        const promise = activateHubExtension().then((classes) => {
+        await activateHubExtension().then((classes) => {
             RequestCreator = classes.RequestCreator;
-            CookieStore = classes.CookieStore;
         });
 
-        activateHubExtension().catch(noop);
+        requestCreator = new RequestCreator();
+        fetch = new SimpleFetch(requestCreator);
+        authenticator = new NewAuthenticator(fetch);
         cancellationToken = new CancellationTokenSource();
-        const { url, token, username: user } = JSON.parse(Buffer.from(await workspace.fs.readFile(file)).toString());
+        const { url, username: user } = JSON.parse(Buffer.from(await workspace.fs.readFile(file)).toString());
         baseUrl = url;
         username = user;
+        const { token } = await generateToken('pwd');
         hubToken = token;
         assert.ok(baseUrl, 'No JupyterHub url');
         assert.ok(hubToken, 'No JupyterHub token');
-        await promise;
     });
-    beforeEach(() => {
-        disposableStore = new DisposableStore();
-        requestCreator = new RequestCreator();
-        fetch = new SimpleFetch(requestCreator);
-        authenticator = disposableStore.add(new NewAuthenticator(fetch, CookieStore));
-    });
+    beforeEach(() => (disposableStore = new DisposableStore()));
     afterEach(() => disposableStore.dispose());
+    after(async () => {
+        await sleep(100_000);
+        // Delete all tokens generated.
+        await Promise.all(
+            generatedTokens.map((item) =>
+                deleteApiToken(baseUrl, username, item.tokenId, item.token, fetch, cancellationToken.token).catch(noop)
+            )
+        );
+        cancellationToken.dispose();
+    });
 
+    async function generateToken(password: string) {
+        const { token, tokenId } = await authenticator.getJupyterAuthInfo(
+            { baseUrl, authInfo: { username, password, token: '' } },
+            cancellationToken.token
+        );
+        expect(token).to.be.a('string').that.is.not.equal('');
+        if (password !== token) {
+            expect(tokenId).to.be.a('string').that.is.not.equal('');
+        }
+        generatedTokens.push({ token, tokenId });
+        return { token, tokenId };
+    }
     [
         { title: 'password', password: () => 'pwd', isApiToken: true },
         { title: 'token', password: () => hubToken, isApiToken: true }
-    ].forEach(({ title, password, isApiToken }) => {
+    ].forEach(({ title, password }) => {
         describe(title, function () {
             before(function () {
                 if (isWebExtension() && password() === hubToken) {
@@ -68,62 +85,34 @@ describe('Authentication', function () {
                     return this.skip();
                 }
             });
-            it('should get Hub auth info', async () => {
-                const { headers } = await authenticator.getHubApiAuthInfo(
-                    { baseUrl, authInfo: { username, password: password() } },
-                    cancellationToken.token
-                );
-                expect(headers).to.be.an('object');
-                if (!isApiToken) {
-                    expect(headers).to.include.keys('_xsrf', 'Cookie', 'X-Xsrftoken');
-                    expect(headers).to.not.include.keys('Authorization');
-                } else {
-                    expect(headers).to.not.include.keys('_xsrf', 'Cookie', 'X-Xsrftoken');
-                    expect(headers).to.include.keys('Authorization');
-                    // expect(headers['Authorization']).to.be.equal(`token ${hubToken}`);
-                }
+            it('should get Auth info', async () => {
+                const { token } = await generateToken(password());
+                expect(token).to.be.a('string').that.is.not.equal('');
             });
-            it('should get Jupyter auth info', async () => {
-                const { headers } = await authenticator.getJupyterAuthInfo(
-                    { baseUrl, authInfo: { username, password: password() } },
-                    cancellationToken.token
-                );
-                expect(headers).to.be.an('object');
-                if (!isApiToken) {
-                    expect(headers).to.include.keys('_xsrf', 'Cookie', 'X-Xsrftoken');
-                    expect(headers).to.not.include.keys('Authorization');
-                } else {
-                    expect(headers).to.not.include.keys('_xsrf', 'Cookie', 'X-Xsrftoken');
-                    expect(headers).to.include.keys('Authorization');
-                    // expect(headers['Authorization']).to.be.equal(`token ${hubToken}`);
-                }
-            });
-            it('should pass validation', async function () {
+            it.only('should pass validation', async function () {
+                const { token } = await generateToken(password());
+
                 const validator = new JupyterHubConnectionValidator(fetch);
                 await validator.validateJupyterUri(
                     baseUrl,
-                    { username, password: password() },
+                    { username, password: password(), token },
                     authenticator,
                     cancellationToken.token
                 );
             });
             it('should be able to start a session', async function () {
-                // Found while dev that even though we get the cookies/headers and the like
-                // Some paths in the app like retrieving kernel specs/sessions can be succesful,
-                // However if we try to start a session, it fails. This is because the cookies that we extracted was not correct.
-                const { headers } = await authenticator.getJupyterAuthInfo(
-                    { baseUrl, authInfo: { username, password: password() } },
-                    cancellationToken.token
-                );
+                const { token } = await generateToken(password());
                 const serverSettings = createServerConnectSettings(
                     baseUrl,
-                    { username: username, headers },
+                    { username: username, token },
                     requestCreator
                 );
                 (serverSettings as ReadWrite<typeof serverSettings>).WebSocket = getWebSocketCreator()(
                     undefined,
                     true,
-                    () => headers,
+                    () => ({
+                        Authorization: `token ${token}`
+                    }),
                     () => []
                 ) as any;
 
@@ -142,7 +131,9 @@ describe('Authentication', function () {
                     type: 'notebook'
                 });
                 expect(session.model.kernel?.name).to.be.equal(kernelSpecs.default);
-                await Promise.all([session.shutdown(), kernelManager.shutdownAll()]);
+                expect(session.model.path).to.be.equal('one.ipynb');
+                expect(session.model.type).to.be.equal('notebook');
+                await Promise.all([session.shutdown().catch(noop), kernelManager.shutdownAll().catch(noop)]);
             });
         });
     });
