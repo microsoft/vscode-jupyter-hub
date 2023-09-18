@@ -73,9 +73,7 @@ const webExtensionConfig = {
             }
         })
     ],
-    externals: {
-        externals: ['vscode', 'commonjs', 'node:crypto'], // Don't bundle these
-    },
+    externals: ['vscode', 'commonjs', 'node:crypto'], // Don't bundle these
     performance: {
         hints: false
     },
