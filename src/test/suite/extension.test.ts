@@ -13,13 +13,11 @@ import { ClassType, ReadWrite } from '../../common/types';
 import { IJupyterRequestCreator } from '../../types';
 import { createServerConnectSettings, deleteApiToken } from '../../jupyterHubApi';
 import { KernelManager, SessionManager } from '@jupyterlab/services';
-import { isWebExtension } from '../../utils';
-import { sleep } from '../../common/async';
 
 const TIMEOUT = 30_000; // Spinning up jupyter servers could take a while.
 describe('Authentication', function () {
     let baseUrl = 'http://localhost:8000';
-    let hubToken = '';
+    let apiToken = '';
     let username = '';
     let cancellationToken: CancellationTokenSource;
     this.timeout(TIMEOUT);
@@ -44,14 +42,13 @@ describe('Authentication', function () {
         baseUrl = url;
         username = user;
         const { token } = await generateToken('pwd');
-        hubToken = token;
+        apiToken = token;
         assert.ok(baseUrl, 'No JupyterHub url');
-        assert.ok(hubToken, 'No JupyterHub token');
+        assert.ok(apiToken, 'No JupyterHub token');
     });
     beforeEach(() => (disposableStore = new DisposableStore()));
     afterEach(() => disposableStore.dispose());
     after(async () => {
-        await sleep(100_000);
         // Delete all tokens generated.
         await Promise.all(
             generatedTokens.map((item) =>
@@ -74,22 +71,15 @@ describe('Authentication', function () {
         return { token, tokenId };
     }
     [
-        { title: 'password', password: () => 'pwd', isApiToken: true },
-        { title: 'token', password: () => hubToken, isApiToken: true }
+        { title: 'password', password: () => 'pwd' }, // Test with password.
+        { title: 'token', password: () => apiToken } // Test with a user entered API token.
     ].forEach(({ title, password }) => {
         describe(title, function () {
-            before(function () {
-                if (isWebExtension() && password() === hubToken) {
-                    // Web does not support tokens generated via CLI.
-                    // API tokens must be generated via the REST API using username/password.
-                    return this.skip();
-                }
-            });
             it('should get Auth info', async () => {
                 const { token } = await generateToken(password());
                 expect(token).to.be.a('string').that.is.not.equal('');
             });
-            it.only('should pass validation', async function () {
+            it('should pass validation', async function () {
                 const { token } = await generateToken(password());
 
                 const validator = new JupyterHubConnectionValidator(fetch);
