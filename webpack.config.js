@@ -74,7 +74,7 @@ const webExtensionConfig = {
         })
     ],
     externals: {
-        vscode: 'commonjs vscode' // ignored because it doesn't exist
+        externals: ['vscode', 'commonjs', 'node:crypto'], // Don't bundle these
     },
     performance: {
         hints: false
