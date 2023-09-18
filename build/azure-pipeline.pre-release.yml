@@ -45,9 +45,7 @@ extends:
         env:
           VSC_BUILD_ID: $(Build.BuildNumber)
 
-      - script: npm run prePublishBundlePreRelease
+      - script: npm run esbuild-release
         displayName: Build
-        env:
-          VSC_VSCE_TARGET: $(vsceTarget)
 
     publishExtension: ${{ parameters.publishExtension }}
