@@ -27,7 +27,7 @@
         "theme": "light"
     },
     "engines": {
-        "vscode": "^1.82.0"
+        "vscode": "^1.83.0"
     },
     "l10n": "./l10n",
     "keywords": [
@@ -61,15 +61,12 @@
     "enabledApiProposals": [],
     "scripts": {
         "package": "npm run esbuild-release && vsce package -o ms-toolsai-jupyter-hub-insiders.vsix",
-        "packagex": "gulp clean && npm run esbuild-release && vsce package -o ms-toolsai-jupyter-hub-insiders.vsix",
         "compile": "npm run esbuild-base-node && npm run esbuild-base-web",
-        "checkDependencies": "gulp checkDependencies",
         "postinstall": "npx vscode-dts 1.82.0",
         "test:unittests": "mocha --config ./build/.mocha.unittests.js.json ./out/**/*.unit.test.js",
         "lint": "eslint -c .eslintrc.js --ext .ts --ext .tsx src",
         "prettier-fix": "prettier 'src/**/*.ts*' --write && prettier 'build/**/*.js' --write",
-        "clean": "gulp clean",
-        "updateBuildNumber": "gulp updateBuildNumber",
+        "updateBuildNumber": "node ./build/updateBuildNumber.js",
         "esbuild-base-node": "esbuild ./src/extension.node.ts --bundle --outfile=dist/extension.node.js --external:vscode --external:node:crypto --format=cjs --platform=node",
         "esbuild-base-web": "esbuild ./src/extension.web.ts --bundle --outfile=dist/extension.web.js --external:vscode --external:node:crypto --format=cjs --target=es2018 --define:global=this",
         "esbuild-test-web": "esbuild ./src/test/suite/index.web.ts --bundle --outfile=dist/test.index.web.js --external:vscode --external:node:crypto --format=cjs --target=es2018 --define:global=this --alias:stream=stream-browserify",
@@ -77,11 +74,10 @@
         "esbuild-release": "npm run esbuild-base-node && npm run esbuild-base-web",
         "esbuild-node-watch": "npm run esbuild-base-node -- --sourcemap --watch",
         "esbuild-web-watch": "npm run esbuild-base-web -- --sourcemap --watch",
-        "esbuild-web-test": "npm run esbuild-test-web -- --sourcemap",
         "test-compile": "tsc -p ./",
         "test-compile-watch": "tsc -p ./ --watch",
         "test": "node ./out/test/runTest.js",
-        "test:web": "vscode-test-web --quality=stable --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/test.index.web.js ./tmp",
+        "test:web": "vscode-test-web --quality=insiders --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/test.index.web.js ./tmp",
         "test:web:ci": "node ./out/test/runTest.web.js",
         "test-compile-webpack": "webpack",
         "test-compile-webpack-watch": "webpack --watch",

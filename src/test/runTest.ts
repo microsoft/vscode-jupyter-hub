@@ -15,7 +15,7 @@ async function main() {
         disposables.push(await startJupterHub());
 
         const extensionTestsPath = path.resolve(__dirname, './suite/index');
-        const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');
+        const vscodeExecutablePath = await downloadAndUnzipVSCode('insiders');
         const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath);
         console.info(`Installing Jupyter Extension`);
         spawnSync(cliPath, ['--install-extension', 'ms-toolsai.jupyter', '--disable-telemetry'], {
@@ -24,7 +24,7 @@ async function main() {
         });
 
         // Download VS Code, unzip it and run the integration test
-        await runTests({ extensionDevelopmentPath, extensionTestsPath, launchArgs: [TEMP_DIR] });
+        await runTests({ extensionDevelopmentPath, extensionTestsPath, launchArgs: [TEMP_DIR], version: 'insiders' });
     } catch (err) {
         console.error('Failed to run tests', err);
         process.exit(1);

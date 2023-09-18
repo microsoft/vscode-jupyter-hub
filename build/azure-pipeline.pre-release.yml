@@ -40,17 +40,12 @@ extends:
       - script: npm ci
         displayName: npm ci
 
-      - script: npm run clean
-        displayName: Clean
-
       - script: npm run updateBuildNumber
         displayName: Update build number
         env:
           VSC_BUILD_ID: $(Build.BuildNumber)
 
-      - script: npm run prePublishBundlePreRelease
+      - script: npm run esbuild-release
         displayName: Build
-        env:
-          VSC_VSCE_TARGET: $(vsceTarget)
 
     publishExtension: ${{ parameters.publishExtension }}

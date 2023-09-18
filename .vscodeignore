@@ -17,6 +17,7 @@ docs/**
 .nvmrc
 .nycrc
 .travis.yml
+CodeQL.yml
 CODE_OF_CONDUCT.md
 CODING_STANDARDS.md
 CONTRIBUTING.md
@@ -24,6 +25,7 @@ CONTRIBUTING - LANGUAGE SERVER.md
 coverconfig.json
 cucumber-report.json
 gulpfile.js
+*.code-workspace
 news/**
 package.webviews/webview-side.dependencies.json
 package-lock.json
