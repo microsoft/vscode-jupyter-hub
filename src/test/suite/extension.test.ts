@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import { assert, expect } from 'chai';
-import { NewAuthenticator } from '../../authenticators/authenticator';
+import { Authenticator } from '../../authenticator';
 import { CancellationTokenSource, Uri, workspace } from 'vscode';
 import { DisposableStore } from '../../common/lifecycle';
 import { activateHubExtension, getWebSocketCreator } from './helpers';
@@ -23,7 +23,7 @@ describe('Authentication', function () {
     this.timeout(TIMEOUT);
     let RequestCreator: ClassType<IJupyterRequestCreator>;
     let disposableStore: DisposableStore;
-    let authenticator: NewAuthenticator;
+    let authenticator: Authenticator;
     let fetch: SimpleFetch;
     let requestCreator: IJupyterRequestCreator;
     let generatedTokens: { token: string; tokenId: string }[] = [];
@@ -36,7 +36,7 @@ describe('Authentication', function () {
 
         requestCreator = new RequestCreator();
         fetch = new SimpleFetch(requestCreator);
-        authenticator = new NewAuthenticator(fetch);
+        authenticator = new Authenticator(fetch);
         cancellationToken = new CancellationTokenSource();
         const { url, username: user } = JSON.parse(Buffer.from(await workspace.fs.readFile(file)).toString());
         baseUrl = url;

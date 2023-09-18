@@ -2,11 +2,11 @@
 // Licensed under the MIT License.
 
 import { CancellationToken } from 'vscode';
-import { SimpleFetch } from '../common/request';
+import { SimpleFetch } from './common/request';
 import { IAuthenticator } from './types';
-import { generateNewApiToken, verifyApiToken } from '../jupyterHubApi';
+import { generateNewApiToken, verifyApiToken } from './jupyterHubApi';
 
-export class NewAuthenticator implements IAuthenticator {
+export class Authenticator implements IAuthenticator {
     constructor(private readonly fetch: SimpleFetch) {}
     public async getJupyterAuthInfo(
         options: {

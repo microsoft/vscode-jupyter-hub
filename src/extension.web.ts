@@ -11,8 +11,10 @@ import { SimpleFetch } from './common/request';
 import { JupyterServerIntegration } from './jupyterIntegration';
 import { getJupyterApi, setIsWebExtension } from './utils';
 import { ClassImplementationsForTests } from './testUtils';
+import { trackInstallOfExtension } from './common/telemetry';
 
 export async function activate(context: ExtensionContext) {
+    trackInstallOfExtension();
     setIsWebExtension();
     context.subscriptions.push(disposableStore);
     getJupyterApi()

@@ -16,7 +16,7 @@ import { dispose } from './common/lifecycle';
 import { JupyterHubServerStorage } from './storage';
 import { SimpleFetch } from './common/request';
 import { JupyterHubUrlCapture } from './urlCapture';
-import { NewAuthenticator } from './authenticators/authenticator';
+import { Authenticator } from './authenticator';
 import { deleteApiToken, getJupyterUrl } from './jupyterHubApi';
 import { noop } from './common/utils';
 
@@ -27,7 +27,7 @@ export const UserJupyterServerUriListMementoKey = '_builtin.jupyterServerUrlProv
 export class JupyterServerIntegration implements JupyterServerProvider, JupyterServerCommandProvider {
     readonly id: string = 'UserJupyterServerPickerProviderId';
     readonly documentation = Uri.parse('https://aka.ms/vscodeJuptyerExtKernelPickerExistingServer');
-    private readonly newAuthenticator: NewAuthenticator;
+    private readonly newAuthenticator: Authenticator;
     private readonly disposables: Disposable[] = [];
     private readonly _onDidChangeServers = new EventEmitter<void>();
     public readonly onDidChangeServers = this._onDidChangeServers.event;
@@ -39,7 +39,7 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
         private readonly storage: JupyterHubServerStorage,
         private readonly urlCapture: JupyterHubUrlCapture
     ) {
-        this.newAuthenticator = new NewAuthenticator(fetch);
+        this.newAuthenticator = new Authenticator(fetch);
         const collection = this.jupyterApi.createJupyterServerCollection(
             this.id,
             Localized.KernelActionSourceTitle,
