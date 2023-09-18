@@ -5,7 +5,7 @@
 
 # On github actions, the following code fails with the error `OSError: [Errno 6] No such device or address`
 # Usingnode.js on CI we can see the username is `runner`
-username = 'donjayamanne' #os.getlogin()
+username = 'runner' #os.getlogin()
 
 c = get_config()  #noqa
 c.JupyterHub.authenticator_class = 'jupyterhub.auth.DummyAuthenticator'
