@@ -15,7 +15,7 @@ async function main() {
         disposables.push(await startJupterHub());
 
         const extensionTestsPath = path.resolve(__dirname, './suite/index');
-        const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');
+        const vscodeExecutablePath = await downloadAndUnzipVSCode('insiders');
         const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath);
         console.info(`Installing Jupyter Extension`);
         spawnSync(cliPath, ['--install-extension', 'ms-toolsai.jupyter', '--disable-telemetry'], {

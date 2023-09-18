@@ -4,22 +4,19 @@ A [Visual Studio Code](https://code.visualstudio.com/) [extension](https://marke
 
 ### Quick Start
 -   **Step 1.** Install [VS Code](https://code.visualstudio.com/)
--   **Step 2.** Install [Anaconda](https://docs.anaconda.com/anaconda/install/index.html)/[Miniconda](https://docs.conda.io/en/latest/miniconda.html) or another Python environment in which you've installed the Jupyter package
--   Since not working with Python, make sure to have a [Jupyter Kernel](https://docs.jupyter.org/en/latest/install/kernels.html) that corresponds to the language you would like to use installed on your machine.
--   **Step 3.** Install the [Jupyter Extension](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter) and the [Python Extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python)
+-   **Step 3.** Install the [Jupyter Extension](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter), [Python Extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python) and the [JupyterHub Extension](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter-hub)
 -   **Step 4.** Open or create a notebook file by opening the Command Palette (`Ctrl+Shift+P`) and select `Jupyter: Create New Jupyter Notebook`.<br><img src="https://code.visualstudio.com/assets/docs/datascience/data-science-tutorial/create-notebook.png">
--   **Step 5.** Select your kernel by clicking on the kernel picker in the top right of the notebook or by invoking the `Notebook: Select Notebook Kernel` command and start coding!<br><img src="https://code.visualstudio.com/assets/docs/datascience/data-science-tutorial/select-kernel.png">
+-   **Step 5.** Open the kernel picker by clicking on the kernel picker in the top right of the notebook or by invoking the `Notebook: Select Notebook Kernel` command
+        * Select the option `Existing JupyterHub Server...`
+        * Follow the prompts to enter the Url of the JupyterHub Server, username and password.
+        * Next select a Kernel and start coding!<br><img src="https://code.visualstudio.com/assets/docs/datascience/data-science-tutorial/select-kernel.png">
 
 ## Questions, issues, feature requests, and contributions
 
--   If you have a question about how to accomplish something with the extension, please [ask on Discussions](https://github.com/microsoft/vscode-jupyter/discussions). Our [wiki](https://github.com/microsoft/vscode-jupyter/wiki) can be a source of information as well.
--   Any and all feedback is appreciated and welcome! If you come across a problem or bug with the extension, please [file an issue](https://github.com/microsoft/vscode-jupyter/issues/new/choose).
+-   If you have a question about how to accomplish something with the extension, please [ask on Discussions](https://github.com/microsoft/vscode-jupyter/discussions). -   Any and all feedback is appreciated and welcome! If you come across a problem or bug with the extension, please [file an issue](https://github.com/microsoft/vscode-jupyter-hub/issues/new).
+    -   If someone has already [filed an issue](https://github.com/Microsoft/vscode-jupyter-hub/issues) that encompasses your feedback, please leave a 👍/👎 reaction on the issue.
 
-    -   If someone has already [filed an issue](https://github.com/Microsoft/vscode-jupyter/issues) that encompasses your feedback, please leave a 👍/👎 reaction on the issue.
-
--   Contributions are always welcome, so please see our [contributing guide](https://github.com/Microsoft/vscode-jupyter/blob/main/CONTRIBUTING.md) for more details.
-
--   If you're interested in the development of the extension, you can read about our [development process](https://github.com/microsoft/vscode-jupyter/blob/main/CONTRIBUTING.md#development-process)
+-   Contributions are always welcome, so please see our [contributing guide](https://github.com/Microsoft/vscode-jupyter-hub/blob/main/CONTRIBUTING.md) for more details.
 
 ## Data and telemetry
 

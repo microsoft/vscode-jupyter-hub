@@ -22,7 +22,7 @@ async function main() {
             extensionTestsPath,
             folderPath: TEMP_DIR,
             browserType: 'chromium',
-            quality: 'stable'
+            quality: 'insiders'
         });
     } catch (err) {
         console.error('Failed to run tests', err);

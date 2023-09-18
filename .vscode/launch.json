@@ -44,76 +44,14 @@
                 "--extensionDevelopmentPath=${workspaceFolder}",
                 "--extensionTestsPath=${workspaceFolder}/out/test/suite/index.js"
             ],
-            "env": {
-                "CI_PYTHON_PATH": "" // Update with path to real python interpereter used for testing.
-            },
             "sourceMaps": true,
             "outFiles": ["${workspaceFolder}/out/**/*.js", "!${workspaceFolder}/**/node_modules**/*"],
-            // "preLaunchTask": "Compile",
+            "preLaunchTask": "Compile",
             "skipFiles": ["<node_internals>/**"],
             "presentation": {
                 "group": "2_tests",
                 "order": 6
             }
         }
-        // {
-        //     "name": "Build and Launch Web",
-        //     "type": "extensionHost",
-        //     "debugWebWorkerHost": true,
-        //     "request": "launch",
-        //     "args": ["--extensionDevelopmentPath=${workspaceFolder}", "--extensionDevelopmentKind=web"],
-        //     "outFiles": ["${workspaceFolder}/dist/**/*", "!${workspaceFolder}/**/node_modules**/*"],
-        //     "preLaunchTask": "Compile Web Extension",
-        //     "presentation": {
-        //         "group": "1_extension",
-        //         "order": 1
-        //     }
-        // },
-        // {
-        //     "name": "Launch Web",
-        //     "type": "extensionHost",
-        //     "debugWebWorkerHost": true,
-        //     "request": "launch",
-        //     "args": ["--extensionDevelopmentPath=${workspaceFolder}", "--extensionDevelopmentKind=web"],
-        //     "outFiles": ["${workspaceFolder}/dist/**/*", "!${workspaceFolder}/**/node_modules**/*"],
-        //     "presentation": {
-        //         "group": "1_extension",
-        //         "order": 1
-        //     }
-        // },
-        // {
-        //     "name": "Tests (web)",
-        //     "type": "extensionHost",
-        //     "debugWebWorkerHost": true,
-        //     "request": "launch",
-        //     "args": [
-        //         "${workspaceFolder}/tmp",
-        //         "--extensionDevelopmentPath=${workspaceFolder}",
-        //         "--extensionDevelopmentKind=web",
-        //         "--extensionTestsPath=${workspaceFolder}/dist/web/test/suite/test.index.web.js"
-        //     ],
-        //     "outFiles": ["${workspaceFolder}/dist/**/*.js"],
-        //     "sourceMaps": true,
-        //     "presentation": {
-        //         "group": "2_tests",
-        //         "order": 11
-        //     }
-        // },
-        // {
-        //     "name": "Web Tests (without debugging)",
-        //     "type": "node",
-        //     "program": "${workspaceFolder}/build/launchWebTest.js",
-        //     "request": "launch",
-        //     "outFiles": ["${workspaceFolder}/out/**/*.*"],
-        //     "sourceMaps": true,
-        //     "preLaunchTask": "compile-web-test",
-        //     "presentation": {
-        //         "group": "2_tests",
-        //         "order": 11
-        //     },
-        //     "env": {
-        //         "CI_PYTHON_PATH": "" // Update with path to real python interpereter used for testing.
-        //     }
-        // }
     ]
 }
