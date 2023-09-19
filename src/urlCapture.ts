@@ -292,7 +292,7 @@ class GetPassword extends DisposableStore implements MultiStep<Step, State> {
                 buttons: [moreInfo],
                 onDidTriggerButton: (e) => {
                     if (e === moreInfo) {
-                        env.openExternal(Uri.parse('https://aka.ms/vscjremoteweb')).then(noop, noop);
+                        env.openExternal(Uri.parse('https://aka.ms/vscodeJupyterHubApiToken')).then(noop, noop);
                     }
                 },
                 validateInput: async (value) => {
