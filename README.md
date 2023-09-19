@@ -4,12 +4,14 @@ A [Visual Studio Code](https://code.visualstudio.com/) [extension](https://marke
 
 ### Quick Start
 -   **Step 1.** Install [VS Code](https://code.visualstudio.com/)
--   **Step 3.** Install the [Jupyter Extension](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter), [Python Extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python) and the [JupyterHub Extension](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter-hub)
--   **Step 4.** Open or create a notebook file by opening the Command Palette (`Ctrl+Shift+P`) and select `Jupyter: Create New Jupyter Notebook`.<br><img src="https://code.visualstudio.com/assets/docs/datascience/data-science-tutorial/create-notebook.png">
--   **Step 5.** Open the kernel picker by clicking on the kernel picker in the top right of the notebook or by invoking the `Notebook: Select Notebook Kernel` command
-        * Select the option `Existing JupyterHub Server...`
-        * Follow the prompts to enter the Url of the JupyterHub Server, username and password.
-        * Next select a Kernel and start coding!<br><img src="https://code.visualstudio.com/assets/docs/datascience/data-science-tutorial/select-kernel.png">
+-   **Step 2.** Install the [JupyterHub Extension](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter-hub)
+-   **Step 3.** Open or create a notebook file by opening the Command Palette (`Ctrl+Shift+P`) and select `Jupyter: Create New Jupyter Notebook`.
+-   **Step 4.** Open the kernel picker by clicking on the kernel picker in the top right of the notebook or by invoking the `Notebook: Select Notebook Kernel` command
+-   Select the option `Existing JupyterHub Server...`
+-   Follow the prompts to enter the Url of the JupyterHub Server, username and password (or an [API token](https://github.com/microsoft/vscode-jupyter-hub/wiki/Logging-in-with-Username-and-API-token)).
+-   Next select a Kernel and start coding!
+
+![jupyterHubPreview](https://github.com/microsoft/vscode-jupyter-hub/assets/1948812/0fadd80c-3455-4408-8be9-8c6441809654)
 
 ## Questions, issues, feature requests, and contributions
 
