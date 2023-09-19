@@ -320,7 +320,7 @@ class GetPassword extends DisposableStore implements MultiStep<Step, State> {
                             // We can skip this for now, as this will get verified again
                             // First we need to check with user whether to allow insecure connections and untrusted certs.
                         } else {
-                            traceError(`Failed to validate user name and password for ${state.baseUrl}`, err);
+                            traceError(`Failed to validate username and password for ${state.baseUrl}`, err);
                             return Localized.usernamePasswordAuthFailure;
                         }
                     }
