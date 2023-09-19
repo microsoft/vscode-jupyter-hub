@@ -19,6 +19,8 @@ import { JupyterHubUrlCapture } from './urlCapture';
 import { Authenticator } from './authenticator';
 import { deleteApiToken, getJupyterUrl } from './jupyterHubApi';
 import { noop } from './common/utils';
+import { IJupyterHubConnectionValidator } from './types';
+import { JupyterHubConnectionValidator } from './validator';
 
 export const UserJupyterServerUriListKey = 'user-jupyter-server-uri-list';
 export const UserJupyterServerUriListKeyV2 = 'user-jupyter-server-uri-list-version2';
@@ -33,12 +35,14 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
     public readonly onDidChangeServers = this._onDidChangeServers.event;
     private previouslyEnteredUrlTypedIntoQuickPick?: string;
     private previouslyEnteredJupyterServerBasedOnUrlTypedIntoQuickPick?: JupyterServer;
+    private readonly jupyterConnectionValidator: IJupyterHubConnectionValidator;
     constructor(
         private readonly fetch: SimpleFetch,
         private readonly jupyterApi: Jupyter,
         private readonly storage: JupyterHubServerStorage,
         private readonly urlCapture: JupyterHubUrlCapture
     ) {
+        this.jupyterConnectionValidator = new JupyterHubConnectionValidator(fetch);
         this.newAuthenticator = new Authenticator(fetch);
         const collection = this.jupyterApi.createJupyterServerCollection(
             this.id,
@@ -210,6 +214,17 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
                 traceError(`Failed to update server with the latest token information ${server.id}`, ex);
             }
         }
+
+        // Ensure the server is running.
+        // Else nothing will work when attempting to connect to this server from Jupyter Extension.
+        await this.jupyterConnectionValidator
+            .validateJupyterUri(
+                serverInfo.baseUrl,
+                { username: authInfo.username, password: authInfo.password, token: result.token },
+                this.newAuthenticator,
+                cancelToken
+            )
+            .catch(noop);
 
         return {
             ...server,
