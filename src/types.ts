@@ -37,7 +37,6 @@ export interface IJupyterHubConnectionValidator {
         authInfo: {
             username: string;
             password: string;
-            headers?: Record<string, string>;
             token?: string;
         },
         authenticator: IAuthenticator,
