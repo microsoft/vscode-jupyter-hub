@@ -48,9 +48,7 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
         this.disposables.push(collection);
         this.disposables.push(this._onDidChangeServers);
         collection.commandProvider = this;
-        collection.documentation = Uri.parse(
-            'https://code.visualstudio.com/docs/datascience/jupyter-kernel-management#_existing-jupyter-server'
-        );
+        collection.documentation = Uri.parse('https://aka.ms/vscodeJupyterHub');
     }
     public dispose() {
         dispose(this.disposables);
