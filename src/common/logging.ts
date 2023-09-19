@@ -5,7 +5,7 @@ import { window, workspace } from 'vscode';
 import { Localized } from './localize';
 import { disposableStore } from './lifecycle';
 
-export const outputChannel = disposableStore.add(window.createOutputChannel(Localized.OutputChannelName));
+export const outputChannel = disposableStore.add(window.createOutputChannel(Localized.OutputChannelName, 'log'));
 
 let loggingLevel: 'error' | 'debug' = 'error';
 
@@ -49,7 +49,7 @@ function formatErrors(...args: unknown[]) {
         }
         const info: string[] = [`${arg.name}: ${arg.message}`.trim()];
         if (arg.stack) {
-            const stack = (arg.stack || '').split(/\r?\n/g);
+            const stack = (arg.stack || '').split(/\r?\n/g).map((l) => l.trim()); // remove tabs and other white space
             const firstStackLine = stack.find((l) => l.indexOf('at ') === 0);
             if (stack.length === 1) {
                 //

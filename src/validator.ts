@@ -8,6 +8,7 @@ import {
     CancellationTokenSource,
     ConfigurationTarget,
     Disposable,
+    Progress,
     ProgressLocation,
     window
 } from 'vscode';
@@ -44,7 +45,7 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
                 title: Localized.ConnectingToJupyterServer,
                 cancellable: true
             },
-            async (_progress, progressCancel) => {
+            async (progress, progressCancel) => {
                 const disposable = new DisposableStore();
                 const masterCancel = disposable.add(new CancellationTokenSource());
                 const token = masterCancel.token;
@@ -52,8 +53,8 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
                 disposable.add(progressCancel.onCancellationRequested(() => masterCancel.cancel()));
                 try {
                     // Check if the server is running.
-                    const didStartServer = await this.startIfServerNotStarted(baseUrl, authInfo, token).catch((ex) =>
-                        traceError(`Failed to start server`, ex)
+                    const didStartServer = await this.startIfServerNotStarted(baseUrl, authInfo, progress, token).catch(
+                        (ex) => traceError(`Failed to start server`, ex)
                     );
                     const started = new StopWatch();
                     // Get the auth information again, as the previously held auth information does not seem to work when starting a jupyter server
@@ -123,6 +124,10 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
             password: string;
             token: string;
         },
+        progress: Progress<{
+            message?: string | undefined;
+            increment?: number | undefined;
+        }>,
         token: CancellationToken
     ) {
         try {
@@ -134,7 +139,7 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
             traceError(`Failed to get user info`, ex);
             return;
         }
-
+        progress.report({ message: Localized.startingJupyterServer });
         await startServer(baseUrl, authInfo.username, authInfo.token, this.fetch, token).catch((ex) =>
             ex instanceof CancellationError ? undefined : traceError(`Failed to start the Jupyter Server`, ex)
         );

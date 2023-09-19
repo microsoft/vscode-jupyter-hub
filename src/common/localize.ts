@@ -6,7 +6,8 @@ import { l10n } from 'vscode';
 // Most messages are re-used, hence keep them in a single place and re-use.
 export namespace Localized {
     export const OutputChannelName = l10n.t('JupyterHub');
-    export const ConnectingToJupyterServer = l10n.t('Connecting to Jupyter Server');
+    export const ConnectingToJupyterServer = l10n.t('Connecting to JupyterHub Server');
+    export const startingJupyterServer = l10n.t('Starting Server');
     export const KernelActionSourceTitle = l10n.t('Existing JupyterHub Server...');
     export const labelOfCommandToEnterUrl = l10n.t('Enter the Url of the running JupyterHub Server...');
     export const placeholderOfInputBoxToEnterUrl = l10n.t('Enter the url of the running JupyterHub Server');

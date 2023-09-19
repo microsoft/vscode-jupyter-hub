@@ -300,6 +300,7 @@ class GetPassword extends DisposableStore implements MultiStep<Step, State> {
                         return Localized.emptyPasswordErrorMessage;
                     }
                     try {
+                        state.auth.password = value;
                         const result = await this.authenticator.getJupyterAuthInfo(
                             {
                                 baseUrl: state.baseUrl,
@@ -401,8 +402,8 @@ export function getSuggestedDisplayName(baseUrl: string, usedNames: string[]) {
     if (!isIPAddress && !usedNamesSet.has(hostName.toLowerCase())) {
         return hostName;
     }
-    for (let i = 1; i < 10; i++) {
-        const name = `${hostName} ${i}`;
+    for (let i = 0; i < 10; i++) {
+        const name = `${hostName} ${i === 0 ? '' : i}`.trim();
         if (!usedNamesSet.has(name.toLowerCase())) {
             return name;
         }
