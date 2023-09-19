@@ -5,7 +5,7 @@ import { window, workspace } from 'vscode';
 import { Localized } from './localize';
 import { disposableStore } from './lifecycle';
 
-export const outputChannel = disposableStore.add(window.createOutputChannel(Localized.OutputChannelName));
+export const outputChannel = disposableStore.add(window.createOutputChannel(Localized.OutputChannelName, 'log'));
 
 let loggingLevel: 'error' | 'debug' = 'error';
 
