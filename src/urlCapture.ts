@@ -403,7 +403,7 @@ export function getSuggestedDisplayName(baseUrl: string, usedNames: string[]) {
         return hostName;
     }
     for (let i = 0; i < 10; i++) {
-        const name = `${hostName} ${i === 0 ? '' : i}`.trim();
+        const name = i === 0 ? hostName : `${hostName} ${i}`;
         if (!usedNamesSet.has(name.toLowerCase())) {
             return name;
         }
