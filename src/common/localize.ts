@@ -11,8 +11,8 @@ export namespace Localized {
     export const labelOfCommandToEnterUrl = l10n.t('Enter the Url of the running JupyterHub Server...');
     export const placeholderOfInputBoxToEnterUrl = l10n.t('Enter the url of the running JupyterHub Server');
     export const titleOfInputBoxToEnterUrl = l10n.t('Enter the Url of the running JupyterHub Server');
-    export const captureUserNameTitle = 'Enter your user name';
-    export const captureUserNamePrompt = 'user name';
+    export const captureUserNameTitle = 'Enter your username';
+    export const captureUserNamePrompt = 'username';
     export const capturePasswordTitle = 'Enter your password or API token';
     export const capturePasswordPrompt = 'password or token';
     export const usernamePasswordAuthFailure = l10n.t('Invalid username or password.');
@@ -37,7 +37,7 @@ export namespace Localized {
     export const connectToToTheJupyterServer = (url: string) => l10n.t('Connect to the JupyterHub server {0}', url);
     export const jupyterSelectURIInvalidURI = l10n.t('Invalid Url specified');
     export const invalidJupyterHubUrl = l10n.t('Invalid JupyterHub Url specified');
-    export const jupyterRenameServer = l10n.t('Change Server Display Name (Leave Blank To Use Url)');
+    export const jupyterRenameServer = l10n.t('Change server name');
     export const remoteJupyterConnectionFailedWithoutServerWithError = (errorMessage: string) =>
         l10n.t('Connection failure. Verify the server is running and reachable. ({0}).', errorMessage);
     export const emptyUserNameErrorMessage = l10n.t('Username cannot be empty');
