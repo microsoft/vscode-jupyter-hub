@@ -9,9 +9,9 @@ export namespace Localized {
     export const ConnectingToJupyterServer = l10n.t('Connecting to JupyterHub Server');
     export const startingJupyterServer = l10n.t('Starting Server');
     export const KernelActionSourceTitle = l10n.t('Existing JupyterHub Server...');
-    export const labelOfCommandToEnterUrl = l10n.t('Enter the Url of the running JupyterHub Server...');
-    export const placeholderOfInputBoxToEnterUrl = l10n.t('Enter the url of the running JupyterHub Server');
-    export const titleOfInputBoxToEnterUrl = l10n.t('Enter the Url of the running JupyterHub Server');
+    export const labelOfCommandToEnterUrl = l10n.t('Enter the URL of the running JupyterHub Server...');
+    export const placeholderOfInputBoxToEnterUrl = l10n.t('Enter the URL of the running JupyterHub Server');
+    export const titleOfInputBoxToEnterUrl = l10n.t('Enter the URL of the running JupyterHub Server');
     export const captureUserNameTitle = 'Enter your username';
     export const captureUserNamePrompt = 'username';
     export const capturePasswordTitle = 'Enter your password or API token';
@@ -36,8 +36,8 @@ export namespace Localized {
     export const jupyterSelfCertEnable = l10n.t('Yes, connect anyway');
     export const jupyterSelfCertClose = l10n.t('No, close the connection');
     export const connectToToTheJupyterServer = (url: string) => l10n.t('Connect to the JupyterHub server {0}', url);
-    export const jupyterSelectURIInvalidURI = l10n.t('Invalid Url specified');
-    export const invalidJupyterHubUrl = l10n.t('Invalid JupyterHub Url specified');
+    export const jupyterSelectURIInvalidURI = l10n.t('Invalid URL specified');
+    export const invalidJupyterHubUrl = l10n.t('Invalid JupyterHub URL specified');
     export const jupyterRenameServer = l10n.t('Change server name');
     export const remoteJupyterConnectionFailedWithoutServerWithError = (errorMessage: string) =>
         l10n.t('Connection failure. Verify the server is running and reachable. ({0}).', errorMessage);
