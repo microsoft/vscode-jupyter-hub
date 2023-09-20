@@ -3,7 +3,6 @@
 
 import { CancellationToken, workspace } from 'vscode';
 import { SimpleFetch } from './common/request';
-import { IJupyterRequestCreator } from './types';
 import { ServerConnection } from '@jupyterlab/services';
 import { traceDebug, traceError } from './common/logging';
 import { appendUrlPath } from './utils';
@@ -156,6 +155,25 @@ export async function getUserInfo(
     }
     throw new Error(await getResponseErrorMessageToThrow(`Failed to get user info`, response));
 }
+
+export async function getUserJupyterUrl(
+    baseUrl: string,
+    username: string,
+    token: string,
+    fetch: SimpleFetch,
+    cancelToken: CancellationToken
+) {
+    let usersJupyterUrl = await getUserInfo(baseUrl, username, token, fetch, cancelToken)
+        .then((info) => appendUrlPath(baseUrl, info.server))
+        .catch((ex) => {
+            traceError(`Failed to get the user Jupyter Url`, ex);
+        });
+    if (!usersJupyterUrl) {
+        usersJupyterUrl = appendUrlPath(baseUrl, `user/${encodeURIComponent(username)}/`);
+    }
+    return usersJupyterUrl;
+}
+
 export async function startServer(
     baseUrl: string,
     username: string,
@@ -181,15 +199,16 @@ async function getResponseErrorMessageToThrow(message: string, response: Respons
     return `${message}, ${response.statusText} (${response.status}) with message  ${responseText}`;
 }
 
-export function createServerConnectSettings(
+export async function createServerConnectSettings(
     baseUrl: string,
     authInfo: {
         username: string;
         token: string;
     },
-    requestCreator: IJupyterRequestCreator
-): ServerConnection.ISettings {
-    baseUrl = getJupyterUrl(baseUrl, authInfo.username);
+    fetch: SimpleFetch,
+    cancelToken: CancellationToken
+): Promise<ServerConnection.ISettings> {
+    baseUrl = await getUserJupyterUrl(baseUrl, authInfo.username, authInfo.token, fetch, cancelToken);
     let serverSettings: Partial<ServerConnection.ISettings> = {
         baseUrl,
         appUrl: '',
@@ -199,7 +218,7 @@ export function createServerConnectSettings(
 
     // Agent is allowed to be set on this object, but ts doesn't like it on RequestInit, so any
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let requestInit: any = requestCreator.getRequestInit();
+    let requestInit: any = fetch.requestCreator.getRequestInit();
 
     serverSettings = { ...serverSettings, token: authInfo.token, appendToken: true };
 
@@ -208,8 +227,8 @@ export function createServerConnectSettings(
         .get<boolean>('allowUnauthorizedRemoteConnection', false);
     // If this is an https connection and we want to allow unauthorized connections set that option on our agent
     // we don't need to save the agent as the previous behaviour is just to create a temporary default agent when not specified
-    if (baseUrl.startsWith('https') && allowUnauthorized && requestCreator.createHttpRequestAgent) {
-        const requestAgent = requestCreator.createHttpRequestAgent();
+    if (baseUrl.startsWith('https') && allowUnauthorized && fetch.requestCreator.createHttpRequestAgent) {
+        const requestAgent = fetch.requestCreator.createHttpRequestAgent();
         requestInit = { ...requestInit, agent: requestAgent };
     }
 
@@ -219,16 +238,12 @@ export function createServerConnectSettings(
     serverSettings = {
         ...serverSettings,
         init: requestInit,
-        fetch: requestCreator.getFetchMethod(),
-        Request: requestCreator.getRequestCtor(undefined),
-        Headers: requestCreator.getHeadersCtor()
+        fetch: fetch.requestCreator.getFetchMethod(),
+        Request: fetch.requestCreator.getRequestCtor(undefined),
+        Headers: fetch.requestCreator.getHeadersCtor()
     };
 
     return ServerConnection.makeSettings(serverSettings);
-}
-
-export function getJupyterUrl(baseUrl: string, username: string) {
-    return appendUrlPath(baseUrl, `user/${encodeURIComponent(username)}/`);
 }
 
 // Caching is faster than making a http request every single time.

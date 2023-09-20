@@ -66,10 +66,11 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
                     while (true) {
                         // Attempt to list the running kernels. It will return empty if there are none, but will
                         // throw if can't connect.
-                        const settings = createServerConnectSettings(
+                        const settings = await createServerConnectSettings(
                             baseUrl,
                             { username: authInfo.username, token: jupyterAuth.token },
-                            this.fetch.requestCreator
+                            this.fetch,
+                            token
                         );
                         const gotKernelSpecs = await getKernelSpecs(settings, token);
                         if (gotKernelSpecs) {

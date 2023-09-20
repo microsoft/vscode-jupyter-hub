@@ -17,7 +17,7 @@ import { JupyterHubServerStorage } from './storage';
 import { SimpleFetch } from './common/request';
 import { JupyterHubUrlCapture } from './urlCapture';
 import { Authenticator } from './authenticator';
-import { deleteApiToken, getJupyterUrl } from './jupyterHubApi';
+import { deleteApiToken, getUserJupyterUrl } from './jupyterHubApi';
 import { noop } from './common/utils';
 import { IJupyterHubConnectionValidator } from './types';
 import { JupyterHubConnectionValidator } from './validator';
@@ -184,8 +184,7 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
             throw new Error(`Server ${server.id} not found`);
         }
 
-        const baseUrl = Uri.parse(getJupyterUrl(serverInfo.baseUrl, authInfo?.username || ''));
-
+        // Verify the server is running, if not start this server.
         const result = await this.newAuthenticator.getJupyterAuthInfo(
             { baseUrl: serverInfo.baseUrl, authInfo },
             cancelToken
@@ -224,6 +223,15 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
             )
             .catch(noop);
 
+        const baseUrl = Uri.parse(
+            await getUserJupyterUrl(
+                serverInfo.baseUrl,
+                authInfo.username || '',
+                authInfo.token,
+                this.fetch,
+                cancelToken
+            )
+        );
         return {
             ...server,
             connectionInformation: {

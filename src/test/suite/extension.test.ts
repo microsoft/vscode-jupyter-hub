@@ -92,10 +92,11 @@ describe('Authentication', function () {
             });
             it('should be able to start a session', async function () {
                 const { token } = await generateToken(password());
-                const serverSettings = createServerConnectSettings(
+                const serverSettings = await createServerConnectSettings(
                     baseUrl,
                     { username: username, token },
-                    requestCreator
+                    fetch,
+                    cancellationToken.token
                 );
                 (serverSettings as ReadWrite<typeof serverSettings>).WebSocket = getWebSocketCreator()(
                     undefined,
