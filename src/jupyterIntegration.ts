@@ -124,7 +124,7 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
             const label = Localized.connectToToTheJupyterServer(url);
             return [{ label, url } as JupyterServerCommand];
         }
-        return [{ label: Localized.labelOfCommandToEnterUrl, picked: true }];
+        return [{ label: Localized.labelOfCommandToEnterUrl, canBeAutoSelected: true }];
     }
     async removeJupyterServer?(server: JupyterServer): Promise<void> {
         const tokenSource = new CancellationTokenSource();
