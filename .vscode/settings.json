@@ -39,8 +39,5 @@
         "source.fixAll.tslint": true
     },
     "typescript.preferences.importModuleSpecifier": "relative",
-    "mochaExplorer.files": "./out/test/**/*.unit.test.js",
-    "mochaExplorer.configFile": "./build/.mocha.unittests.js.json",
-    "mochaExplorer.ui": "bdd",
     "mochaExplorer.nodeArgv": ["--enable-source-maps"]
 }
