@@ -11,7 +11,9 @@ export async function activateHubExtension() {
     if (!ext) {
         throw new Error('JupyterHub extension not installed');
     }
-    await ext.activate();
+    if (!ext.isActive) {
+        await ext.activate();
+    }
     return Promise.resolve(ext.exports as ClassImplementationsForTests);
 }
 
