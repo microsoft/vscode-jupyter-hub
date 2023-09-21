@@ -20,6 +20,15 @@ export async function startJupterHub(): Promise<{ dispose: () => void }> {
     return spawnJupyterHub();
 }
 
+export async function getExtensionsDir(): Promise<string> {
+    const name = 'vscode_jupyter_hub_exts';
+    const extDirPath = path.join(TEMP_DIR, name);
+    if (!fs.existsSync(extDirPath)) {
+        fs.mkdirSync(extDirPath);
+    }
+    return extDirPath;
+}
+
 function setupTempDir() {
     if (fs.existsSync(TEMP_DIR)) {
         return;

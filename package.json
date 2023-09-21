@@ -81,6 +81,7 @@
         "test:web:ci": "node ./out/test/runTest.web.js",
         "test-compile-webpack": "webpack",
         "test-compile-webpack-watch": "webpack --watch",
+        "make-extension-pack-for-web-tests": "node ./build/makeExtensionPack.js",
         "open-in-browser": "vscode-test-web --extensionDevelopmentPath=. ./tmp"
     },
     "dependencies": {

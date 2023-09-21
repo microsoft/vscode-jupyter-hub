@@ -2,21 +2,11 @@
 // Licensed under the MIT License.
 
 import * as path from 'path';
-import * as fs from 'fs';
 import { downloadAndUnzipVSCode, resolveCliPathFromVSCodeExecutablePath, runTests } from '@vscode/test-electron';
 import { TEMP_DIR } from './constants.node';
 import { dispose } from '../common/lifecycle';
 import { spawnSync } from 'child_process';
-import { startJupterHub } from './suite/helpers.node';
-
-async function getExtensionsDir(): Promise<string> {
-    const name = 'vscode_jupyter_hub_exts';
-    const extDirPath = path.join(TEMP_DIR, name);
-    if (!fs.existsSync(extDirPath)) {
-        fs.mkdirSync(extDirPath);
-    }
-    return extDirPath;
-}
+import { getExtensionsDir, startJupterHub } from './suite/helpers.node';
 
 async function main() {
     const disposables: { dispose(): void }[] = [];
