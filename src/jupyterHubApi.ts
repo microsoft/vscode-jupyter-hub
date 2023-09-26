@@ -40,20 +40,28 @@ export namespace ApiTypes {
 export async function getVersion(url: string, fetch: SimpleFetch, token: CancellationToken): Promise<string> {
     // Otherwise request hub/api. This should return the json with the hub version
     // if this is a hub url
-    const response = await fetch.send(
-        appendUrlPath(url, 'hub/api'),
-        {
-            method: 'get',
-            redirect: 'manual',
-            headers: { Connection: 'keep-alive' }
-        },
-        token
-    );
-    if (response.status === 200) {
-        const { version }: { version: string } = await response.json();
-        return version;
+    const apiUrl = appendUrlPath(url, 'hub/api');
+    let response: Response | undefined;
+    let messageTemplate = `Invalid Jupyter Hub Url ${apiUrl} (failed to get version)`;
+    try {
+        const response = await fetch.send(
+            apiUrl,
+            {
+                method: 'get',
+                redirect: 'manual',
+                headers: { Connection: 'keep-alive' }
+            },
+            token
+        );
+        if (response.status === 200) {
+            messageTemplate = `Invalid Jupyter Hub Url ${apiUrl} (failed to parse response)`;
+            const { version }: { version: string } = await response.json();
+            return version;
+        }
+        throw new Error('Non 200 response');
+    } catch (ex) {
+        throw new Error(await getResponseErrorMessageToThrowOrLog(messageTemplate, response));
     }
-    throw new Error(`Invalid Jupyter Hub Url ${url} (failed to get version).`);
 }
 
 export async function deleteApiToken(
@@ -96,6 +104,7 @@ export async function generateNewApiToken(
     fetch: SimpleFetch,
     cancellationToken: CancellationToken
 ): Promise<{ token: string; tokenId: string }> {
+    let response: Response | undefined;
     try {
         const url = appendUrlPath(baseUrl, `hub/api/users/${encodeURIComponent(username)}/tokens`);
         const body = {
@@ -103,11 +112,12 @@ export async function generateNewApiToken(
             note: `Requested by JupyterHub extension in VSCode`
         };
         type ResponseType = { user: string; id: string; token: string };
-        const response = await fetch.send(url, { method: 'POST', body: JSON.stringify(body) }, cancellationToken);
+        response = await fetch.send(url, { method: 'POST', body: JSON.stringify(body) }, cancellationToken);
         const json = (await response.json()) as ResponseType;
+        traceDebug(`Generated new token for user using the new way`);
         return { token: json.token, tokenId: json.id };
     } catch (ex) {
-        traceError(`Failed to generate token, trying old way`, ex);
+        traceError(await getResponseErrorMessageToThrowOrLog(`Failed to generate token, trying old way`, response), ex);
         return generateNewApiTokenOldWay(baseUrl, username, password, fetch, cancellationToken);
     }
 }
@@ -131,6 +141,7 @@ export async function generateNewApiTokenOldWay(
         const response = await fetch.send(url, { method: 'POST', body: JSON.stringify(body) }, cancellationToken);
         const json = (await response.json()) as ResponseType;
         if (json.token) {
+            traceDebug(`Generated new token for user using the old way`);
             trackUsageOfOldApiGeneration(baseUrl);
             return { token: json.token, tokenId: '' };
         }
@@ -147,13 +158,14 @@ export async function getUserInfo(
     fetch: SimpleFetch,
     cancellationToken: CancellationToken
 ): Promise<ApiTypes.UserInfo> {
+    traceDebug(`Getting user info for user ${baseUrl}, token length = ${token.length} && ${token.trim().length}`);
     const url = appendUrlPath(baseUrl, `hub/api/users/${encodeURIComponent(username)}`);
     const headers = { Authorization: `token ${token}` };
     const response = await fetch.send(url, { method: 'GET', headers }, cancellationToken);
     if (response.status === 200) {
         return response.json();
     }
-    throw new Error(await getResponseErrorMessageToThrow(`Failed to get user info`, response));
+    throw new Error(await getResponseErrorMessageToThrowOrLog(`Failed to get user info`, response));
 }
 
 export async function getUserJupyterUrl(
@@ -187,14 +199,17 @@ export async function startServer(
     if (response.status === 201 || response.status === 202) {
         return;
     }
-    throw new Error(await getResponseErrorMessageToThrow(`Failed to fetch user info`, response));
+    throw new Error(await getResponseErrorMessageToThrowOrLog(`Failed to fetch user info`, response));
 }
-async function getResponseErrorMessageToThrow(message: string, response: Response) {
+async function getResponseErrorMessageToThrowOrLog(message: string, response?: Response) {
+    if (!response) {
+        return message;
+    }
     let responseText = '';
     try {
         responseText = await response.text();
     } catch (ex) {
-        traceError(`Error fetching text from response ${ex} to log error ${message}`);
+        traceError(`Error fetching text from response to log error ${message}`, ex);
     }
     return `${message}, ${response.statusText} (${response.status}) with message  ${responseText}`;
 }
