@@ -7,7 +7,7 @@ import { disposableStore } from './lifecycle';
 
 export const outputChannel = disposableStore.add(window.createOutputChannel(Localized.OutputChannelName, 'log'));
 
-let loggingLevel: 'error' | 'debug' = 'error';
+let loggingLevel: 'error' | 'debug' = workspace.getConfiguration('jupyterHub').get('log', 'error');
 
 disposableStore.add(
     workspace.onDidChangeConfiguration((e) => {
