@@ -310,6 +310,13 @@ class GetPassword extends DisposableStore implements MultiStep<Step, State> {
                         );
                         state.auth.token = result.token || '';
                         state.auth.tokenId = result.tokenId || '';
+                        traceDebug(
+                            `Got an Auth token = ${state.auth.token.length} && ${
+                                state.auth.token.trim().length
+                            }, tokenId = ${state.auth.tokenId.length} && ${state.auth.tokenId.trim().length} for ${
+                                state.baseUrl
+                            }`
+                        );
                     } catch (err) {
                         traceError('Failed to get Auth Info', err);
                         if (err instanceof CancellationError) {
