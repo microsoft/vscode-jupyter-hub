@@ -57,6 +57,24 @@
             "description": "%capabilities.untrustedWorkspace.description%"
         }
     },
+    "contributes": {
+        "configuration": {
+            "type": "object",
+            "title": "JupyterHub",
+            "properties": {
+                "jupyterhub.log": {
+                    "type": "string",
+                    "default": "error",
+                    "enum": [
+                        "off",
+                        "error",
+                        "debug"
+                    ],
+                    "description": "Helo World"
+                }
+            }
+        }
+    },
     "scripts": {
         "package": "npm run esbuild-release && vsce package -o ms-toolsai-jupyter-hub-insiders.vsix",
         "compile": "npm run esbuild-base-node && npm run esbuild-base-web",
