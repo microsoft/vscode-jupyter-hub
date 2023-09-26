@@ -11,7 +11,7 @@ let loggingLevel: 'error' | 'debug' = 'error';
 
 disposableStore.add(
     workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('jupyter.log')) {
+        if (e.affectsConfiguration('jupyterHub.log')) {
             const setting = workspace.getConfiguration('jupyterHub').log;
             loggingLevel = setting;
         }
