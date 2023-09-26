@@ -7,18 +7,26 @@ import { disposableStore } from './lifecycle';
 
 export const outputChannel = disposableStore.add(window.createOutputChannel(Localized.OutputChannelName, 'log'));
 
-let loggingLevel: 'error' | 'debug' = 'error';
+let loggingLevel: 'error' | 'debug' | 'off' = workspace.getConfiguration('jupyterhub').get('log', 'error');
 
 disposableStore.add(
     workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('jupyter.log')) {
-            const setting = workspace.getConfiguration('jupyterHub').log;
-            loggingLevel = setting;
+        if (e.affectsConfiguration('jupyterhub.log')) {
+            let setting: string = workspace.getConfiguration('jupyterhub').log;
+            setting = setting.toLowerCase();
+            if (setting === 'error' || setting === 'debug' || setting === 'off') {
+                loggingLevel = setting;
+            } else {
+                console.error(`Invalid Error Level for JupyterHub ${setting}`);
+            }
         }
     })
 );
 
 export function traceError(..._args: unknown[]): void {
+    if (loggingLevel === 'off') {
+        return;
+    }
     logMessage('error', ..._args);
 }
 

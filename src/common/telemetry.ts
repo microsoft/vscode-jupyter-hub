@@ -135,6 +135,7 @@ export function sendJupyterHubUrlAdded(baseUrl: string, version: string, serverI
 }
 
 interface JupyterHubUrlNotAdded {
+    failed: true;
     reason: 'cancel' | 'back' | 'error';
     lastStep:
         | ''
@@ -149,6 +150,11 @@ interface JupyterHubUrlNotAdded {
 type JupyterHubUrlNotAddedClassification = {
     owner: 'donjayamanne';
     comment: 'Url was not added';
+    failed: {
+        classification: 'SystemMetaData';
+        purpose: 'FeatureInsight';
+        comment: 'Indicator that adding the Url failed';
+    };
     reason: {
         classification: 'SystemMetaData';
         purpose: 'FeatureInsight';
@@ -174,6 +180,7 @@ export function sendJupyterHubUrlNotAdded(
         | 'After'
 ) {
     publicLog2<JupyterHubUrlNotAdded, JupyterHubUrlNotAddedClassification>('addJupyterHubUrl', {
+        failed: true,
         reason,
         lastStep
     });
@@ -218,7 +225,7 @@ type JupyterHubUsageClassification = {
 };
 
 export function trackInstallOfExtension() {
-    publicLog2<JupyterHubUsage, JupyterHubUsageClassification>('generateTokenWithOldApi', {});
+    publicLog2<JupyterHubUsage, JupyterHubUsageClassification>('activated', {});
 }
 
 interface JupyterHubUrlCertProblemsSolutionData {
