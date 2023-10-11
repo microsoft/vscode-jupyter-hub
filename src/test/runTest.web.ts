@@ -16,7 +16,7 @@ async function main() {
         const extensionDevelopmentPath = path.resolve(__dirname, '../../');
         disposables.push(await startJupterHub());
 
-        const extensionTestsPath = path.resolve(EXTENSION_DIR, 'dist/web/test/suite/test.index.web.js');
+        const extensionTestsPath = path.resolve(EXTENSION_DIR, 'dist/test/suite/test.index.web.js');
         const vscodeExecutablePath = await downloadAndUnzipVSCode('insiders');
         const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath);
         const extensionsDir = await getExtensionsDir();
