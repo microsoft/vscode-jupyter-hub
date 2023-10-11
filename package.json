@@ -77,7 +77,7 @@
     },
     "scripts": {
         "package": "npm run esbuild-release && vsce package -o ms-toolsai-jupyter-hub-insiders.vsix",
-        "compile": "npm run esbuild-base-node && npm run esbuild-base-web",
+        "compile": "npm run esbuild",
         "postinstall": "npx vscode-dts 1.82.0",
         "test:unittests": "mocha --config ./build/.mocha.unittests.js.json ./out/**/*.unit.test.js",
         "lint": "eslint -c .eslintrc.js --ext .ts --ext .tsx src",
