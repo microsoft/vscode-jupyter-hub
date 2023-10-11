@@ -96,7 +96,7 @@
         "test-compile": "tsc -p ./",
         "test-compile-watch": "tsc -p ./ --watch",
         "test": "node ./out/test/runTest.js",
-        "test:web": "vscode-test-web --quality=insiders --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/test.index.web.js ./tmp",
+        "test:web": "vscode-test-web --quality=insiders --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/test/suite/test.index.web.js ./tmp",
         "test:web:ci": "node ./out/test/runTest.web.js",
         "test-compile-webpack": "webpack",
         "test-compile-webpack-watch": "webpack --watch",
