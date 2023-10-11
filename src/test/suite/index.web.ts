@@ -5,6 +5,14 @@ import { setIsWebExtension } from '../../utils';
 import { setWebSocketCreator } from './helpers';
 import { getWebsocketCtor } from './websocketCtor.web';
 
+/* eslint-disable import/no-unresolved */
+// @ts-ignore Ignore compiler warnings.
+import allWebTestes from './*.test.ts';
+if (!allWebTestes) {
+    // We want to ensure this variable is used.
+    console.log(allWebTestes ? 'Bogus log' : '');
+}
+
 setIsWebExtension();
 setWebSocketCreator(getWebsocketCtor);
 
@@ -17,9 +25,6 @@ export function run(): Promise<void> {
             reporter: undefined
         });
 
-        // Bundles all files in the current directory matching `*.test`
-        const importAll = (r: __WebpackModuleApi.RequireContext) => r.keys().forEach(r);
-        importAll(require.context('.', true, /\.test$/));
 
         try {
             // Run the mocha test

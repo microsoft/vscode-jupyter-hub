@@ -8,7 +8,7 @@
     "author": {
         "name": "Microsoft Corporation"
     },
-    "extensionDependencies": [
+    "xextensionDependencies": [
         "ms-toolsai.jupyter"
     ],
     "license": "MIT",
@@ -77,7 +77,10 @@
     },
     "scripts": {
         "package": "npm run esbuild-release && vsce package -o ms-toolsai-jupyter-hub-insiders.vsix",
-        "compile": "npm run esbuild",
+        "compilex": "npm run esbuild",
+        "compile": "npx tsx build/build.ts",
+        "compile-release": "npx tsx build/build.ts --production",
+        "compile-watch": "npx tsx build/build.ts --watch",
         "postinstall": "npx vscode-dts 1.82.0",
         "test:unittests": "mocha --config ./build/.mocha.unittests.js.json ./out/**/*.unit.test.js",
         "lint": "eslint -c .eslintrc.js --ext .ts --ext .tsx src",
@@ -125,7 +128,7 @@
         "@vscode/jupyter-extension": "^0.0.7",
         "@vscode/test-electron": "^2.3.4",
         "@vscode/test-web": "^0.0.29",
-        "chai": "^4.3.8",
+        "chai": "^4.3.10",
         "esbuild": "^0.19.2",
         "eslint": "^8.45.0",
         "eslint-config-airbnb": "^19.0.4",
@@ -142,6 +145,7 @@
         "mocha": "^10.2.0",
         "prettier": "^3.0.0",
         "ts-loader": "^9.4.4",
+        "tsx": "^3.13.0",
         "typescript": "^5.2.2",
         "webpack": "^5.88.2",
         "webpack-cli": "^5.1.4",
