@@ -72,10 +72,7 @@ export async function deleteApiToken(
     fetch: SimpleFetch,
     cancellationToken: CancellationToken
 ) {
-    const url = appendUrlPath(
-        baseUrl,
-        `hub/api/users/${encodeURIComponent(username)}/tokens/${encodeURIComponent(tokenId)}`
-    );
+    const url = appendUrlPath(baseUrl, `hub/api/users/${username}/tokens/${tokenId}`);
     const options = { method: 'DELETE', headers: { Authorization: `token ${token}` } };
     await fetch.send(url, options, cancellationToken);
 }
@@ -106,7 +103,7 @@ export async function generateNewApiToken(
 ): Promise<{ token: string; tokenId: string }> {
     let response: Response | undefined;
     try {
-        const url = appendUrlPath(baseUrl, `hub/api/users/${encodeURIComponent(username)}/tokens`);
+        const url = appendUrlPath(baseUrl, `hub/api/users/${username}/tokens`);
         const body = {
             auth: { username: username, password: password },
             note: `Requested by JupyterHub extension in VSCode`
@@ -159,7 +156,7 @@ export async function getUserInfo(
     cancellationToken: CancellationToken
 ): Promise<ApiTypes.UserInfo> {
     traceDebug(`Getting user info for user ${baseUrl}, token length = ${token.length} && ${token.trim().length}`);
-    const url = appendUrlPath(baseUrl, `hub/api/users/${encodeURIComponent(username)}`);
+    const url = appendUrlPath(baseUrl, `hub/api/users/${username}`);
     const headers = { Authorization: `token ${token}` };
     const response = await fetch.send(url, { method: 'GET', headers }, cancellationToken);
     if (response.status === 200) {
@@ -181,7 +178,7 @@ export async function getUserJupyterUrl(
             traceError(`Failed to get the user Jupyter Url`, ex);
         });
     if (!usersJupyterUrl) {
-        usersJupyterUrl = appendUrlPath(baseUrl, `user/${encodeURIComponent(username)}/`);
+        usersJupyterUrl = appendUrlPath(baseUrl, `user/${username}/`);
     }
     return usersJupyterUrl;
 }
@@ -193,7 +190,7 @@ export async function startServer(
     fetch: SimpleFetch,
     cancellationToken: CancellationToken
 ): Promise<void> {
-    const url = appendUrlPath(baseUrl, `hub/api/users/${encodeURIComponent(username)}/server`);
+    const url = appendUrlPath(baseUrl, `hub/api/users/${username}/server`);
     const headers = { Authorization: `token ${token}` };
     const response = await fetch.send(url, { method: 'POST', headers }, cancellationToken);
     if (response.status === 201 || response.status === 202) {
