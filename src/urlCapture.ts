@@ -13,7 +13,7 @@ import { JupyterHubServerStorage } from './storage';
 import { SimpleFetch } from './common/request';
 import { IAuthenticator } from './types';
 import { Authenticator } from './authenticator';
-import { extractUserNameFromUrl, getJupyterHubBaseUrl, getVersion } from './jupyterHubApi';
+import { extractTokenFromUrl, extractUserNameFromUrl, getJupyterHubBaseUrl, getVersion } from './jupyterHubApi';
 import { isWebExtension } from './utils';
 import { sendJupyterHubUrlAdded, sendJupyterHubUrlNotAdded } from './common/telemetry';
 
@@ -243,6 +243,7 @@ class GetUrlStep extends DisposableStore implements MultiStep<Step, State> {
         state.baseUrl = await getJupyterHubBaseUrl(url, this.fetch, token);
         state.hubVersion = await getVersion(state.baseUrl, this.fetch, token);
         state.auth.username = state.auth.username || extractUserNameFromUrl(url) || '';
+        state.auth.token = state.auth.token || extractTokenFromUrl(url) || '';
         return 'Get Username';
     }
 }
@@ -288,6 +289,7 @@ class GetPassword extends DisposableStore implements MultiStep<Step, State> {
             {
                 title: Localized.capturePasswordTitle,
                 placeholder: Localized.capturePasswordPrompt,
+                value: state.auth.password || state.auth.token || extractTokenFromUrl(state.url) || '',
                 password: true,
                 buttons: [moreInfo],
                 onDidTriggerButton: (e) => {
