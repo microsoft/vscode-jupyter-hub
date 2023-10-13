@@ -6,6 +6,7 @@ import { IJupyterRequestCreator } from '../types';
 import { Localized } from './localize';
 import { raceCancellationError } from './async';
 import { solveCertificateProblem } from './telemetry';
+import { traceError } from './logging';
 
 /**
  * Responsible for intercepting connections to a remote server and asking for a password if necessary
@@ -25,6 +26,7 @@ export class SimpleFetch {
                 this.requestCreator.getFetchMethod()(url, this.addAllowUnauthorized(url, allowUnauthorized, options))
             );
         } catch (e) {
+            traceError(`Error sending request to ${url}`, e);
             if (e.message.indexOf('reason: self signed certificate') >= 0) {
                 // Ask user to change setting and possibly try again.
                 const value = await window.showErrorMessage(
