@@ -10,7 +10,7 @@
         {
             "label": "Compile",
             "type": "npm",
-            "script": "compile",
+            "script": "esbuild",
             "isBackground": true,
             "problemMatcher": ["$tsc-watch"],
             "group": {

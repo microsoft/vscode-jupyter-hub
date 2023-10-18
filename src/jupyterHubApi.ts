@@ -309,3 +309,12 @@ export function extractUserNameFromUrl(url: string) {
         }
     }
 }
+export function extractTokenFromUrl(url: string) {
+    try {
+        const parsedUrl = new URL(url);
+        const token = parsedUrl.searchParams.get('token');
+        return token || '';
+    } catch {
+        return '';
+    }
+}
