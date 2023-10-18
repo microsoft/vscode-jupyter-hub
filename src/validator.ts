@@ -252,6 +252,22 @@ export async function getKernelSpecs(
 }
 
 /**
+ * Error thrown when a jupyter server is using an certificate that isn't recognized.
+ * failed, reason: unable to get issuer certificate
+ *  type = system
+ *  errno = UNABLE_TO_GET_ISSUER_CERT
+ *  code = UNABLE_TO_GET_ISSUER_CERT
+ */
+function isUnableToGetIssuerCertError(err: Error) {
+    return (
+        err.message.indexOf('reason: unable to get issuer certificate') >= 0 ||
+        err.message.includes('UNABLE_TO_GET_ISSUER_CERT') ||
+        err.name.includes('UNABLE_TO_GET_ISSUER_CERT') ||
+        err.toString().includes('UNABLE_TO_GET_ISSUER_CERT')
+    );
+}
+
+/**
  * Error thrown when a jupyter server is using an self signed certificate. This can be expected and we should ask if they want to allow it anyway.
  *
  * Cause:
@@ -261,8 +277,9 @@ export async function getKernelSpecs(
  * The URI entry box when picking a server. It should ask the user if they want to allow it anyway.
  */
 export function isSelfCertsError(err: Error) {
-    return err.message.indexOf('reason: self signed certificate') >= 0;
+    return err.message.indexOf('reason: self signed certificate') >= 0 || isUnableToGetIssuerCertError(err);
 }
+
 export async function handleSelfCertsError(message: string): Promise<boolean> {
     // On a self cert error, warn the user and ask if they want to change the setting
     const enableOption: string = Localized.jupyterSelfCertEnable;
