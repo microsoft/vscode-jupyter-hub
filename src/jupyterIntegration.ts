@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import * as nodeFetch from 'node-fetch';
+import WebSocketIsomorphic from 'isomorphic-ws';
 import { CancellationError, CancellationToken, CancellationTokenSource, Disposable, EventEmitter, Uri } from 'vscode';
 import type {
     Jupyter,
@@ -223,21 +225,53 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
             )
             .catch(noop);
 
-        const baseUrl = Uri.parse(
-            await getUserJupyterUrl(
-                serverInfo.baseUrl,
-                authInfo.username || '',
-                authInfo.token,
-                this.fetch,
-                cancelToken
-            )
+        const rawBaseUrl = await getUserJupyterUrl(
+            serverInfo.baseUrl,
+            authInfo.username || '',
+            authInfo.token,
+            this.fetch,
+            cancelToken
         );
+        // https://github.com/microsoft/vscode-jupyter/issues/15439
+        // baseUrl = baseUrl.replace(/%40/g, '@').replace(/%7E/g, '~');
+        const baseUrl = Uri.parse(rawBaseUrl);
+        const brokenUrl = new nodeFetch.Request(baseUrl.toString(true)).url;
+        const correctUrl = new nodeFetch.Request(rawBaseUrl).url;
+        const brokenWsUrl = brokenUrl.replace('http', 'ws');
+        const brokenWsUrl2 = baseUrl.toString(true).replace('http', 'ws');
+        const correctWsUrl = correctUrl.replace('http', 'ws');
+        const ourFetch = async (input: Request, init?: RequestInit) => {
+            const newUrl = input.url.replace(brokenUrl, correctUrl);
+            init = init || {
+                method: input.method,
+                body: input.body,
+                headers: input.headers,
+                redirect: input.redirect,
+                cache: input.cache,
+                credentials: input.credentials,
+                integrity: input.integrity,
+                keepalive: input.keepalive,
+                mode: input.mode,
+                referrer: input.referrer,
+                referrerPolicy: input.referrerPolicy,
+                signal: input.signal
+            };
+            const newInput = new nodeFetch.Request(newUrl, init as any);
+            return nodeFetch.default(newInput as any, init as any);
+        };
+        class OurWebSocket extends WebSocketIsomorphic {
+            constructor(url: string, protocols?: string | string[]) {
+                super(url.replace(brokenWsUrl, correctWsUrl).replace(brokenWsUrl2, correctWsUrl), protocols);
+            }
+        }
         return {
             ...server,
             connectionInformation: {
                 baseUrl,
-                token: result.token
-            }
+                token: result.token,
+                fetch: ourFetch as any,
+                WebSocket: OurWebSocket
+            } as any
         };
     }
 }
