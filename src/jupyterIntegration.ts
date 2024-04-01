@@ -232,7 +232,7 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
             this.fetch,
             cancelToken
         );
-        // https://github.com/microsoft/vscode-jupyter/issues/15439
+        // https://github.com/microsoft/vscode-jupyter-hub/issues/53
         // baseUrl = baseUrl.replace(/%40/g, '@').replace(/%7E/g, '~');
         const baseUrl = Uri.parse(rawBaseUrl);
         const brokenUrl = new nodeFetch.Request(baseUrl.toString(true)).url;
