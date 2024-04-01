@@ -144,7 +144,8 @@
         "ts-loader": "^9.4.4",
         "typescript": "^5.2.2",
         "webpack": "^5.88.2",
-        "webpack-cli": "^5.1.4"
+        "webpack-cli": "^5.1.4",
+        "ws": "^8.14.1"
     },
     "devDependenciesComments": {
         "@types/react": "Added to ensure @lumino compiles, @lumino is a dependency of Jupyter Lab npm"
