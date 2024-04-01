@@ -125,6 +125,7 @@
         "@vscode/jupyter-extension": "^0.0.7",
         "@vscode/test-electron": "^2.3.4",
         "@vscode/test-web": "^0.0.29",
+        "@types/ws": "^6.0.4",
         "chai": "^4.3.8",
         "esbuild": "^0.19.2",
         "eslint": "^8.45.0",
