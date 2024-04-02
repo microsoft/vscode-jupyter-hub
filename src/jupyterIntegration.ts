@@ -173,7 +173,7 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
         }
         return this.cachedOfAuthInfo.get(server.id)!;
     }
-    public async resolveJupyterServerImpl(
+    private async resolveJupyterServerImpl(
         server: JupyterServer,
         cancelToken: CancellationToken
     ): Promise<JupyterServer> {
@@ -232,8 +232,8 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
             this.fetch,
             cancelToken
         );
+
         // https://github.com/microsoft/vscode-jupyter-hub/issues/53
-        // baseUrl = baseUrl.replace(/%40/g, '@').replace(/%7E/g, '~');
         const baseUrl = Uri.parse(rawBaseUrl);
         const brokenUrl = new nodeFetch.Request(baseUrl.toString(true)).url;
         const correctUrl = new nodeFetch.Request(rawBaseUrl).url;

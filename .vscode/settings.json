@@ -35,8 +35,8 @@
     "prettier.printWidth": 120,
     "prettier.singleQuote": true,
     "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": true,
-        "source.fixAll.tslint": true
+        "source.fixAll.eslint": "explicit",
+        "source.fixAll.tslint": "explicit"
     },
     "typescript.preferences.importModuleSpecifier": "relative",
     "mochaExplorer.nodeArgv": ["--enable-source-maps"]
