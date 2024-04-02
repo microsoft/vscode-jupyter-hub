@@ -56,7 +56,7 @@ export class JupyterHubUrlCapture {
             throw ex;
         }
     }
-    public async captureRemoteJupyterUrlImpl(
+    private async captureRemoteJupyterUrlImpl(
         url: string = '',
         displayName: string = '',
         validationErrorMessage: string = '',

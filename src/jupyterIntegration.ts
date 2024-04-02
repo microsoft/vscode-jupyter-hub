@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import * as nodeFetch from 'node-fetch';
+import WebSocketIsomorphic from 'isomorphic-ws';
 import { CancellationError, CancellationToken, CancellationTokenSource, Disposable, EventEmitter, Uri } from 'vscode';
 import type {
     Jupyter,
@@ -40,7 +42,8 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
         private readonly fetch: SimpleFetch,
         private readonly jupyterApi: Jupyter,
         private readonly storage: JupyterHubServerStorage,
-        private readonly urlCapture: JupyterHubUrlCapture
+        private readonly urlCapture: JupyterHubUrlCapture,
+        private readonly nodeFetchImpl: typeof nodeFetch = nodeFetch
     ) {
         this.jupyterConnectionValidator = new JupyterHubConnectionValidator(fetch);
         this.newAuthenticator = new Authenticator(fetch);
@@ -171,7 +174,7 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
         }
         return this.cachedOfAuthInfo.get(server.id)!;
     }
-    public async resolveJupyterServerImpl(
+    private async resolveJupyterServerImpl(
         server: JupyterServer,
         cancelToken: CancellationToken
     ): Promise<JupyterServer> {
@@ -223,21 +226,53 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
             )
             .catch(noop);
 
-        const baseUrl = Uri.parse(
-            await getUserJupyterUrl(
-                serverInfo.baseUrl,
-                authInfo.username || '',
-                authInfo.token,
-                this.fetch,
-                cancelToken
-            )
+        const rawBaseUrl = await getUserJupyterUrl(
+            serverInfo.baseUrl,
+            authInfo.username || '',
+            authInfo.token,
+            this.fetch,
+            cancelToken
         );
+
+        // https://github.com/microsoft/vscode-jupyter-hub/issues/53
+        const baseUrl = Uri.parse(rawBaseUrl);
+        const brokenUrl = new this.nodeFetchImpl.Request(baseUrl.toString(true)).url;
+        const correctUrl = new this.nodeFetchImpl.Request(rawBaseUrl).url;
+        const brokenWsUrl = brokenUrl.replace('http', 'ws');
+        const brokenWsUrl2 = baseUrl.toString(true).replace('http', 'ws');
+        const correctWsUrl = correctUrl.replace('http', 'ws');
+        const ourFetch = async (input: Request, init?: RequestInit) => {
+            const newUrl = input.url.replace(brokenUrl, correctUrl);
+            init = init || {
+                method: input.method,
+                body: input.body,
+                headers: input.headers,
+                redirect: input.redirect,
+                cache: input.cache,
+                credentials: input.credentials,
+                integrity: input.integrity,
+                keepalive: input.keepalive,
+                mode: input.mode,
+                referrer: input.referrer,
+                referrerPolicy: input.referrerPolicy,
+                signal: input.signal
+            };
+            const newInput = new this.nodeFetchImpl.Request(newUrl, init as any);
+            return this.nodeFetchImpl.default(newInput as any, init as any);
+        };
+        class OurWebSocket extends WebSocketIsomorphic {
+            constructor(url: string, protocols?: string | string[]) {
+                super(url.replace(brokenWsUrl, correctWsUrl).replace(brokenWsUrl2, correctWsUrl), protocols);
+            }
+        }
         return {
             ...server,
             connectionInformation: {
                 baseUrl,
-                token: result.token
-            }
+                token: result.token,
+                fetch: ourFetch as any,
+                WebSocket: OurWebSocket
+            } as any
         };
     }
 }
