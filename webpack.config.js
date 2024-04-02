@@ -7,6 +7,7 @@
 
 const path = require('path');
 const webpack = require('webpack');
+const tsconfig_paths_webpack_plugin = require('tsconfig-paths-webpack-plugin');
 
 /** @type WebpackConfig */
 const webExtensionConfig = {
@@ -49,7 +50,10 @@ const webExtensionConfig = {
                 exclude: /node_modules/,
                 use: [
                     {
-                        loader: 'ts-loader'
+                        loader: 'ts-loader',
+                        options: {
+                            configFile: 'tsconfig.json'
+                        }
                     }
                 ]
             }
@@ -74,6 +78,11 @@ const webExtensionConfig = {
         })
     ],
     resolve: {
+        extensions: ['.ts', '.js'],
+        mainFields: ['browser', 'module', 'main'], // look for `browser` entry point in imported node modules
+        plugins: [
+            new tsconfig_paths_webpack_plugin.TsconfigPathsPlugin({ configFile: 'tsconfig.json', logLevel: 'INFO' })
+        ],
         alias: {
             sinon: path.join(__dirname, 'node_modules', 'sinon', 'lib', 'sinon.js')
         }
