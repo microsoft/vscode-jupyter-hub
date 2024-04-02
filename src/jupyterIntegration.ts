@@ -42,7 +42,8 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
         private readonly fetch: SimpleFetch,
         private readonly jupyterApi: Jupyter,
         private readonly storage: JupyterHubServerStorage,
-        private readonly urlCapture: JupyterHubUrlCapture
+        private readonly urlCapture: JupyterHubUrlCapture,
+        private readonly nodeFetchImpl: typeof nodeFetch = nodeFetch
     ) {
         this.jupyterConnectionValidator = new JupyterHubConnectionValidator(fetch);
         this.newAuthenticator = new Authenticator(fetch);
@@ -235,8 +236,8 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
 
         // https://github.com/microsoft/vscode-jupyter-hub/issues/53
         const baseUrl = Uri.parse(rawBaseUrl);
-        const brokenUrl = new nodeFetch.Request(baseUrl.toString(true)).url;
-        const correctUrl = new nodeFetch.Request(rawBaseUrl).url;
+        const brokenUrl = new this.nodeFetchImpl.Request(baseUrl.toString(true)).url;
+        const correctUrl = new this.nodeFetchImpl.Request(rawBaseUrl).url;
         const brokenWsUrl = brokenUrl.replace('http', 'ws');
         const brokenWsUrl2 = baseUrl.toString(true).replace('http', 'ws');
         const correctWsUrl = correctUrl.replace('http', 'ws');
@@ -256,8 +257,8 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
                 referrerPolicy: input.referrerPolicy,
                 signal: input.signal
             };
-            const newInput = new nodeFetch.Request(newUrl, init as any);
-            return nodeFetch.default(newInput as any, init as any);
+            const newInput = new this.nodeFetchImpl.Request(newUrl, init as any);
+            return this.nodeFetchImpl.default(newInput as any, init as any);
         };
         class OurWebSocket extends WebSocketIsomorphic {
             constructor(url: string, protocols?: string | string[]) {

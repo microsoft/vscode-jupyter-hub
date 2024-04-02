@@ -28,7 +28,11 @@ describe('Jupyter Integration', function () {
     let jupyterApi: Jupyter;
     let storage: JupyterHubServerStorage;
     let urlCapture: JupyterHubUrlCapture;
+    let lastRequestInput: Request | undefined;
+    let lastRequestInit: RequestInit | undefined;
     beforeEach(async function () {
+        lastRequestInput = undefined;
+        lastRequestInit = undefined;
         disposableStore = new DisposableStore();
         fetch = mock<SimpleFetch>();
         jupyterApi = mock<Jupyter>();
@@ -45,7 +49,12 @@ describe('Jupyter Integration', function () {
             instance(fetch),
             instance(jupyterApi),
             instance(storage),
-            instance(urlCapture)
+            instance(urlCapture),
+            ((req: any, init: any) => {
+                lastRequestInput = req;
+                lastRequestInit = init;
+                return Promise.resolve(new Response()) as any;
+            }) as any
         );
     });
     afterEach(() => disposableStore.dispose());
@@ -104,9 +113,6 @@ describe('Jupyter Integration', function () {
             Promise<void>
         >;
         let resolvedServer: JupyterServer;
-        let oldFetch: typeof nodeFetch.default;
-        let lastRequestInput: Request | undefined;
-        let lastRequestInit: RequestInit | undefined;
 
         beforeEach(async () => {
             const serverToReturn: JupyterServer = {
@@ -151,17 +157,10 @@ describe('Jupyter Integration', function () {
                 username: 'joe@bloe (personal)'
             });
             resolvedServer = await integration.resolveJupyterServer(server, cancellationToken.token);
-            oldFetch = nodeFetch.default;
-            (nodeFetch as any).default = (input: RequestInfo, init?: RequestInit) => {
-                lastRequestInput = input as any;
-                lastRequestInit = init;
-                return Promise.resolve(new Response());
-            };
         });
         afterEach(() => {
             stubbedAuth.restore();
             stubbedValidator.restore();
-            (nodeFetch as any).default = oldFetch;
         });
         it('Will return the right url', async () => {
             expect(resolvedServer.connectionInformation).not.to.be.undefined;
