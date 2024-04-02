@@ -43,7 +43,7 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
         private readonly jupyterApi: Jupyter,
         private readonly storage: JupyterHubServerStorage,
         private readonly urlCapture: JupyterHubUrlCapture,
-        private readonly nodeFetchImpl: typeof nodeFetch = nodeFetch
+        private readonly nodeFetchImpl: typeof nodeFetch = nodeFetch.default
     ) {
         this.jupyterConnectionValidator = new JupyterHubConnectionValidator(fetch);
         this.newAuthenticator = new Authenticator(fetch);
