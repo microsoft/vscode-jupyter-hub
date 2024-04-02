@@ -50,11 +50,14 @@ describe('Jupyter Integration', function () {
             instance(jupyterApi),
             instance(storage),
             instance(urlCapture),
-            ((req: any, init: any) => {
-                lastRequestInput = req;
-                lastRequestInit = init;
-                return Promise.resolve(new Response()) as any;
-            }) as any
+            {
+                ...nodeFetch,
+                default: ((req: any, init: any) => {
+                    lastRequestInput = req;
+                    lastRequestInit = init;
+                    return Promise.resolve(new Response()) as any;
+                }) as any
+            }
         );
     });
     afterEach(() => disposableStore.dispose());
