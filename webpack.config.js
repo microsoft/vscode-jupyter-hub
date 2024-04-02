@@ -70,7 +70,8 @@ const webExtensionConfig = {
             BROWSER: JSON.stringify(true),
             process: {
                 platform: JSON.stringify('web')
-            }
+            },
+            sinon: path.join(__dirname, 'node_modules', 'sinon', 'lib', 'sinon.js')
         })
     ],
     externals: ['vscode', 'commonjs', 'node:crypto'], // Don't bundle these
