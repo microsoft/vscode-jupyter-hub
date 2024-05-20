@@ -13,6 +13,11 @@ A [Visual Studio Code](https://code.visualstudio.com/) [extension](https://marke
 
 ![jupyterHubPreview](https://github.com/microsoft/vscode-jupyter-hub/assets/1948812/0fadd80c-3455-4408-8be9-8c6441809654)
 
+> [!WARNING]
+> Currently, opening a notebook in VS Code with a JupyterHub kernel will result in an incorrectly set working directory ([issue](https://github.com/microsoft/vscode-jupyter-hub/issues/49)).
+This can cause issues with relative file paths and imports.
+To avoid this problem, it's recommended to use this at the start of your notebook `import os; os.chdir('/folder/where/notebook/lives')`.
+
 ## Questions, issues, feature requests, and contributions
 
 -   If you have a question about how to accomplish something with the extension, please [ask on Discussions](https://github.com/microsoft/vscode-jupyter/discussions). -   Any and all feedback is appreciated and welcome! If you come across a problem or bug with the extension, please [file an issue](https://github.com/microsoft/vscode-jupyter-hub/issues/new).
