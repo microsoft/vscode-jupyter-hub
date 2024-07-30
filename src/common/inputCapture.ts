@@ -85,6 +85,55 @@ export class WorkflowInputCapture {
             token.onCancellationRequested(() => reject(new CancellationError()), this, this.disposables);
         });
     }
+    public async pickValue<T extends QuickPickItem>(
+        options: {
+            title: string;
+            placeholder?: string;
+            validationMessage?: string;
+            quickPickItems: T[];
+        },
+        token: CancellationToken
+    ) {
+        return new Promise<T | undefined>((resolve, reject) => {
+            const input = window.createQuickPick<T>();
+            this.disposables.push(new Disposable(() => input.hide()));
+            this.disposables.push(input);
+            input.ignoreFocusOut = true;
+            input.title = options.title;
+            input.ignoreFocusOut = true;
+            input.placeholder = options.placeholder || '';
+            input.buttons = [QuickInputButtons.Back];
+            input.items = options.quickPickItems;
+            input.canSelectMany = false;
+            input.show();
+            input.onDidHide(() => reject(new CancellationError()), this, this.disposables);
+            input.onDidTriggerButton(
+                (e) => {
+                    if (e === QuickInputButtons.Back) {
+                        resolve(undefined);
+                    }
+                },
+                this,
+                this.disposables
+            );
+            input.onDidAccept(
+                async () => {
+                    // After this we always end up doing some async stuff,
+                    // or display a new quick pick or ui.
+                    // Hence mark this as busy until we dismiss this UI.
+                    input.busy = true;
+                    if (input.selectedItems.length === 1) {
+                        resolve(input.selectedItems[0]);
+                    } else {
+                        resolve(undefined);
+                    }
+                },
+                this,
+                this.disposables
+            );
+            token.onCancellationRequested(() => reject(new CancellationError()), this, this.disposables);
+        });
+    }
 }
 
 /**

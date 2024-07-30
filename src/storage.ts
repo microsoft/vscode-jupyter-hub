@@ -29,11 +29,7 @@ export class JupyterHubServerStorage implements IJupyterHubServerStorage {
     dispose() {
         this.disposable.dispose();
     }
-    public get all(): {
-        id: string;
-        baseUrl: string;
-        displayName: string;
-    }[] {
+    public get all(): JupyterHubServer[] {
         return this.globalMemento.get<JupyterHubServer[]>(serverListStorageKey, []);
     }
     public async getCredentials(
@@ -51,7 +47,7 @@ export class JupyterHubServerStorage implements IJupyterHubServerStorage {
         }
     }
     public async addServerOrUpdate(
-        server: { id: string; baseUrl: string; displayName: string },
+        server: { id: string; baseUrl: string; displayName: string; serverName: string | undefined },
         auth: { username: string; password: string; token: string; tokenId: string }
     ) {
         await Promise.all([

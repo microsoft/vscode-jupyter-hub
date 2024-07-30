@@ -10,7 +10,7 @@ import { noop } from '../../common/utils';
 import { SimpleFetch } from '../../common/request';
 import { JupyterHubConnectionValidator, getKernelSpecs } from '../../validator';
 import { ClassType, ReadWrite } from '../../common/types';
-import { IJupyterRequestCreator } from '../../types';
+import { IJupyterRequestCreator, type IJupyterHubConnectionValidator } from '../../types';
 import { createServerConnectSettings, deleteApiToken } from '../../jupyterHubApi';
 import { KernelManager, SessionManager } from '@jupyterlab/services';
 
@@ -27,6 +27,7 @@ describe('Authentication', function () {
     let fetch: SimpleFetch;
     let requestCreator: IJupyterRequestCreator;
     let generatedTokens: { token: string; tokenId: string }[] = [];
+    let validator: IJupyterHubConnectionValidator;
     before(async function () {
         this.timeout(TIMEOUT);
         const file = Uri.joinPath(workspace.workspaceFolders![0].uri, 'jupyterhub.json');
@@ -38,10 +39,23 @@ describe('Authentication', function () {
         fetch = new SimpleFetch(requestCreator);
         authenticator = new Authenticator(fetch);
         cancellationToken = new CancellationTokenSource();
+        validator = new JupyterHubConnectionValidator(fetch);
         const { url, username: user } = JSON.parse(Buffer.from(await workspace.fs.readFile(file)).toString());
         baseUrl = url;
         username = user;
         const { token } = await generateToken('pwd');
+        // Ensure the server is running.
+        await validator.ensureServerIsRunning(
+            url,
+            undefined,
+            {
+                password: 'pwd',
+                username,
+                token
+            },
+            authenticator,
+            cancellationToken.token
+        );
         apiToken = token;
         assert.ok(baseUrl, 'No JupyterHub url');
         assert.ok(apiToken, 'No JupyterHub token');
@@ -94,6 +108,7 @@ describe('Authentication', function () {
                 const { token } = await generateToken(password());
                 const serverSettings = await createServerConnectSettings(
                     baseUrl,
+                    undefined,
                     { username: username, token },
                     fetch,
                     cancellationToken.token

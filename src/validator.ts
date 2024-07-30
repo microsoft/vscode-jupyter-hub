@@ -39,6 +39,48 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
         authenticator: IAuthenticator,
         mainCancel: CancellationToken
     ): Promise<void> {
+        const disposable = new DisposableStore();
+        const masterCancel = disposable.add(new CancellationTokenSource());
+        const token = masterCancel.token;
+        disposable.add(mainCancel.onCancellationRequested(() => masterCancel.cancel()));
+        try {
+            const info = await getUserInfo(baseUrl, authInfo.username, authInfo.token, this.fetch, token);
+            if (info.name) {
+                return;
+            } else {
+                traceError(`Failed to get user info, got ${JSON.stringify(info)}`);
+                throw new Error('Failed to get user info');
+            }
+        } catch (err) {
+            if (isSelfCertsError(err)) {
+                const handled = await handleSelfCertsError(err.message);
+                if (handled) {
+                    // Try again, there could be other errors.
+                    return await this.validateJupyterUri(baseUrl, authInfo, authenticator, token);
+                }
+            } else if (isSelfCertsExpiredError(err)) {
+                const handled = await handleExpiredCertsError(err.message);
+                if (handled) {
+                    // Try again, there could be other errors.
+                    return await this.validateJupyterUri(baseUrl, authInfo, authenticator, token);
+                }
+            }
+            throw err;
+        } finally {
+            disposable.dispose();
+        }
+    }
+    async ensureServerIsRunning(
+        baseUrl: string,
+        serverName: string | undefined,
+        authInfo: {
+            username: string;
+            password: string;
+            token: string;
+        },
+        authenticator: IAuthenticator,
+        mainCancel: CancellationToken
+    ): Promise<void> {
         await window.withProgress(
             {
                 location: ProgressLocation.Notification,
@@ -53,9 +95,13 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
                 disposable.add(progressCancel.onCancellationRequested(() => masterCancel.cancel()));
                 try {
                     // Check if the server is running.
-                    const didStartServer = await this.startIfServerNotStarted(baseUrl, authInfo, progress, token).catch(
-                        (ex) => traceError(`Failed to start server`, ex)
-                    );
+                    const didStartServer = await this.startIfServerNotStarted(
+                        baseUrl,
+                        serverName,
+                        authInfo,
+                        progress,
+                        token
+                    ).catch((ex) => traceError(`Failed to start server`, ex));
                     const started = new StopWatch();
                     // Get the auth information again, as the previously held auth information does not seem to work when starting a jupyter server
                     const jupyterAuth = await authenticator.getJupyterAuthInfo({ baseUrl, authInfo }, token);
@@ -68,6 +114,7 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
                         // throw if can't connect.
                         const settings = await createServerConnectSettings(
                             baseUrl,
+                            serverName,
                             { username: authInfo.username, token: jupyterAuth.token },
                             this.fetch,
                             token
@@ -120,6 +167,7 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
      */
     private async startIfServerNotStarted(
         baseUrl: string,
+        serverName: string | undefined,
         authInfo: {
             username: string;
             password: string;
@@ -131,9 +179,20 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
         }>,
         token: CancellationToken
     ) {
+        const includeStoppedServers = !!serverName;
         try {
-            const status = await getUserInfo(baseUrl, authInfo.username, authInfo.token, this.fetch, token);
-            if (status.server) {
+            const status = await getUserInfo(
+                baseUrl,
+                authInfo.username,
+                authInfo.token,
+                this.fetch,
+                token,
+                includeStoppedServers
+            );
+            if (!serverName && (status.servers || {})['']?.ready) {
+                return;
+            }
+            if (serverName && (status.servers || {})[serverName]?.ready) {
                 return;
             }
         } catch (ex) {
@@ -141,17 +200,37 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
             return;
         }
         progress.report({ message: Localized.startingJupyterServer });
-        await startServer(baseUrl, authInfo.username, authInfo.token, this.fetch, token).catch((ex) =>
+        await startServer(baseUrl, authInfo.username, serverName, authInfo.token, this.fetch, token).catch((ex) =>
             ex instanceof CancellationError ? undefined : traceError(`Failed to start the Jupyter Server`, ex)
         );
         try {
             const started = Date.now();
             while (true) {
-                const status = await getUserInfo(baseUrl, authInfo.username, authInfo.token, this.fetch, token);
-                if (status.server) {
+                const status = await getUserInfo(
+                    baseUrl,
+                    authInfo.username,
+                    authInfo.token,
+                    this.fetch,
+                    token,
+                    includeStoppedServers
+                );
+                if (!serverName && (status.servers || {})['']?.ready) {
+                    return 'didStartServer';
+                }
+                if (serverName && (status.servers || {})[serverName]?.ready) {
                     return 'didStartServer';
                 }
                 if (Date.now() - started > TIMEOUT_FOR_SESSION_MANAGER_READY) {
+                    if (!serverName && status.server) {
+                        // Old behaviour of returning the currently running server as the default server.
+                        const server = (status.servers || {})[''];
+                        traceDebug(
+                            `Default server status used from status.server 5 ${
+                                status.server
+                            }, as server status is ${JSON.stringify(server)}`
+                        );
+                        return 'didStartServer';
+                    }
                     traceError(`Timeout waiting for Jupyter Server to start, current status = ${status.pending}`);
                     return;
                 }
