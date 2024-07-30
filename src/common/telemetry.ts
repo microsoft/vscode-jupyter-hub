@@ -144,6 +144,7 @@ interface JupyterHubUrlNotAdded {
         | 'Get Username'
         | 'Get Password'
         | 'Verify Connection'
+        | 'Server Selector'
         | 'Get Display Name'
         | 'After';
 }
@@ -176,6 +177,7 @@ export function sendJupyterHubUrlNotAdded(
         | 'Get Username'
         | 'Get Password'
         | 'Verify Connection'
+        | 'Server Selector'
         | 'Get Display Name'
         | 'After'
 ) {

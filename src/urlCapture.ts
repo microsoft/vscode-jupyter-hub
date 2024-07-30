@@ -1,11 +1,20 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-import { CancellationError, CancellationToken, QuickInputButton, ThemeIcon, Uri, env } from 'vscode';
+import {
+    CancellationError,
+    CancellationToken,
+    QuickInputButton,
+    ThemeIcon,
+    Uri,
+    env,
+    l10n,
+    type QuickPickItem
+} from 'vscode';
 import type { JupyterServer } from '@vscode/jupyter-extension';
 import { Localized } from './common/localize';
 import { noop, uuid } from './common/utils';
-import { traceDebug, traceError } from './common/logging';
+import { traceDebug, traceError, traceWarn } from './common/logging';
 import { DisposableStore, dispose } from './common/lifecycle';
 import { JupyterHubConnectionValidator, isSelfCertsError, isSelfCertsExpiredError } from './validator';
 import { WorkflowInputCapture } from './common/inputCapture';
@@ -13,7 +22,14 @@ import { JupyterHubServerStorage } from './storage';
 import { SimpleFetch } from './common/request';
 import { IAuthenticator } from './types';
 import { Authenticator } from './authenticator';
-import { extractTokenFromUrl, extractUserNameFromUrl, getJupyterHubBaseUrl, getVersion } from './jupyterHubApi';
+import {
+    extractTokenFromUrl,
+    extractUserNameFromUrl,
+    getJupyterHubBaseUrl,
+    getVersion,
+    listServers,
+    type ApiTypes
+} from './jupyterHubApi';
 import { isWebExtension } from './utils';
 import { sendJupyterHubUrlAdded, sendJupyterHubUrlNotAdded } from './common/telemetry';
 
@@ -67,6 +83,7 @@ export class JupyterHubUrlCapture {
         const state: State = {
             auth: { username: '', password: '', token: '', tokenId: '' },
             baseUrl: '',
+            serverName: undefined,
             hubVersion: '',
             urlWasPrePopulated: false,
             url,
@@ -80,6 +97,7 @@ export class JupyterHubUrlCapture {
             new GetUserName(),
             new GetPassword(this.newAuthenticator),
             new VerifyConnection(this.jupyterConnection, this.newAuthenticator),
+            new ServerSelector(this.fetch),
             new GetDisplayName(this.storage)
         ];
         const disposables = new DisposableStore();
@@ -105,7 +123,7 @@ export class JupyterHubUrlCapture {
         try {
             const stepsExecuted: Step[] = [];
             while (true) {
-                const step = steps.find((s) => s.step === nextStep);
+                const step = steps.filter((s) => !s.disabled).find((s) => s.step === nextStep);
                 if (!step) {
                     traceError(`Step '${nextStep}' Not found`);
                     throw new CancellationError();
@@ -121,7 +139,8 @@ export class JupyterHubUrlCapture {
                         {
                             id,
                             baseUrl: state.baseUrl,
-                            displayName: state.displayName
+                            displayName: state.displayName,
+                            serverName: state.serverName
                         },
                         {
                             username: state.auth.username,
@@ -168,10 +187,24 @@ export class JupyterHubUrlCapture {
         }
     }
 }
-type Step = 'Before' | 'Get Url' | 'Get Username' | 'Get Password' | 'Verify Connection' | 'Get Display Name' | 'After';
+type Step =
+    | 'Before'
+    | 'Get Url'
+    | 'Get Username'
+    | 'Get Password'
+    | 'Verify Connection'
+    | 'Server Selector'
+    | 'Get Display Name'
+    | 'After';
 
 interface MultiStep<T, State> {
     step: Step;
+    /**
+     * Whether this step is disabled.
+     * Can get disabled as a result of calling `run`.
+     * Meaning, this step should be skipped in the future.
+     */
+    disabled?: boolean;
     canNavigateBackToThis: boolean;
     dispose(): void;
     run(state: State, token: CancellationToken): Promise<T | undefined>;
@@ -180,6 +213,10 @@ type State = {
     displayNamesOfHandles: Map<string, string>;
     urlWasPrePopulated: boolean;
     serverId: string;
+    /**
+     * Name of the server to start (named jupyter hub servers).
+     */
+    serverName: string | undefined;
     errorMessage: string;
     url: string;
     displayName: string;
@@ -373,6 +410,63 @@ class VerifyConnection extends DisposableStore implements MultiStep<Step, State>
                 return 'Get Username';
             }
         }
+        return 'Server Selector';
+    }
+}
+
+function getServerStatus(server: ApiTypes.ServerInfo) {
+    switch (server.pending) {
+        case 'spawn':
+            return l10n.t('Starting');
+        case 'stop':
+            return l10n.t('Shutting down');
+        default:
+            return server.ready ? l10n.t('Running') : l10n.t('Stopped');
+    }
+}
+class ServerSelector extends DisposableStore implements MultiStep<Step, State> {
+    step: Step = 'Server Selector';
+    disabled?: boolean | undefined;
+    canNavigateBackToThis = false;
+    constructor(private readonly fetch: SimpleFetch) {
+        super();
+    }
+    async run(state: State, token: CancellationToken): Promise<Step | undefined> {
+        try {
+            const servers = await listServers(state.baseUrl, state.auth.username, state.auth.token, this.fetch, token);
+            if (servers.length === 0 || (servers.length === 1 && !servers[0].name)) {
+                traceDebug('No servers found for the user');
+                this.disabled = true;
+                return 'Get Display Name';
+            }
+
+            interface ServerQuickPick extends QuickPickItem {
+                server: ApiTypes.ServerInfo;
+            }
+
+            const quickPickItems: ServerQuickPick[] = servers.map((server) => ({
+                label: server.name || 'Default Server',
+                description: `(${getServerStatus(server)})`,
+                server
+            }));
+            const selection = await new WorkflowInputCapture().pickValue(
+                {
+                    title: l10n.t('Select a Server'),
+                    quickPickItems
+                },
+                token
+            );
+            if (!selection) {
+                return;
+            }
+            state.serverName = selection.server.name;
+        } catch (err) {
+            if (err instanceof CancellationError) {
+                throw err;
+            }
+            this.disabled = true;
+            traceWarn("Failed to list all of the servers for the user, assuming there aren't any", err);
+        }
         return 'Get Display Name';
     }
 }
@@ -385,6 +479,7 @@ class GetDisplayName extends DisposableStore implements MultiStep<Step, State> {
     async run(state: State, token: CancellationToken): Promise<Step | undefined> {
         const suggestedDisplayName = getSuggestedDisplayName(
             state.url,
+            state.serverName,
             this.storage.all.map((s) => s.displayName)
         );
         const displayName = await this.add(new WorkflowInputCapture()).getValue(
@@ -402,12 +497,13 @@ class GetDisplayName extends DisposableStore implements MultiStep<Step, State> {
     }
 }
 
-export function getSuggestedDisplayName(baseUrl: string, usedNames: string[]) {
+export function getSuggestedDisplayName(baseUrl: string, serverName: string | undefined, usedNames: string[]) {
     const usedNamesSet = new Set(usedNames.map((s) => s.toLowerCase()));
     usedNamesSet.add('localhost');
     usedNamesSet.add('');
     const isIPAddress = typeof parseInt(new URL(baseUrl).hostname.charAt(0), 10) === 'number';
-    const hostName = isIPAddress ? 'JupyterHub' : new URL(baseUrl).hostname;
+    let hostName = isIPAddress ? 'JupyterHub' : new URL(baseUrl).hostname;
+    hostName = serverName ? `${hostName} (${serverName})` : hostName;
     if (!isIPAddress && !usedNamesSet.has(hostName.toLowerCase())) {
         return hostName;
     }

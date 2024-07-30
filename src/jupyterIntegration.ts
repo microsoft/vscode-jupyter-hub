@@ -201,7 +201,8 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
                     {
                         baseUrl: serverInfo.baseUrl,
                         displayName: serverInfo.displayName,
-                        id: serverInfo.id
+                        id: serverInfo.id,
+                        serverName: serverInfo.serverName
                     },
                     {
                         password: authInfo.password || '',
@@ -215,7 +216,7 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
             }
         }
 
-        // Ensure the server is running.
+        // Validate the uri and auth infor.
         // Else nothing will work when attempting to connect to this server from Jupyter Extension.
         await this.jupyterConnectionValidator
             .validateJupyterUri(
@@ -225,10 +226,22 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
                 cancelToken
             )
             .catch(noop);
+        // Ensure the server is running.
+        // Else nothing will work when attempting to connect to this server from Jupyter Extension.
+        await this.jupyterConnectionValidator
+            .ensureServerIsRunning(
+                serverInfo.baseUrl,
+                serverInfo.serverName,
+                { username: authInfo.username, password: authInfo.password, token: result.token },
+                this.newAuthenticator,
+                cancelToken
+            )
+            .catch(noop);
 
         const rawBaseUrl = await getUserJupyterUrl(
             serverInfo.baseUrl,
             authInfo.username || '',
+            serverInfo.serverName,
             authInfo.token,
             this.fetch,
             cancelToken
