@@ -115,6 +115,20 @@ describe('Jupyter Integration', function () {
             ],
             Promise<void>
         >;
+        let stubbedServerStarter: sinon.SinonStub<
+            [
+                baseUrl: string,
+                serverName: string | undefined,
+                authInfo: {
+                    username: string;
+                    password: string;
+                    token: string;
+                },
+                authenticator: IAuthenticator,
+                mainCancel: CancellationToken
+            ],
+            Promise<void>
+        >;
         let resolvedServer: JupyterServer;
 
         beforeEach(async () => {
@@ -142,6 +156,11 @@ describe('Jupyter Integration', function () {
                 .callsFake(async () => {
                     return;
                 });
+            stubbedServerStarter = sinon
+                .stub(JupyterHubConnectionValidator.prototype, 'ensureServerIsRunning')
+                .callsFake(async () => {
+                    return;
+                });
 
             when(
                 fetch.send('http://localhost:8000/hub/api/users/joe@bloe%20(personal)', anything(), anything())
@@ -164,6 +183,7 @@ describe('Jupyter Integration', function () {
         afterEach(() => {
             stubbedAuth.restore();
             stubbedValidator.restore();
+            stubbedServerStarter.restore();
         });
         it('Will return the right url', async () => {
             expect(resolvedServer.connectionInformation).not.to.be.undefined;

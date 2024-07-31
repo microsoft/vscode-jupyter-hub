@@ -20,6 +20,11 @@ export type JupyterHubServer = {
     id: string;
     baseUrl: string;
     displayName: string;
+    /**
+     * Name of the server to start and use.
+     * If empty, then defaults to the `default` server, which is an empty string.
+     */
+    serverName?: string;
 };
 
 export interface IJupyterHubServerStorage {
@@ -34,6 +39,17 @@ export interface IJupyterHubServerStorage {
 export interface IJupyterHubConnectionValidator {
     validateJupyterUri(
         baseUrl: string,
+        authInfo: {
+            username: string;
+            password: string;
+            token?: string;
+        },
+        authenticator: IAuthenticator,
+        token: CancellationToken
+    ): Promise<void>;
+    ensureServerIsRunning(
+        baseUrl: string,
+        serverName: string | undefined,
         authInfo: {
             username: string;
             password: string;

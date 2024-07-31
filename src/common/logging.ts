@@ -7,7 +7,7 @@ import { disposableStore } from './lifecycle';
 
 export const outputChannel = disposableStore.add(window.createOutputChannel(Localized.OutputChannelName, 'log'));
 
-let loggingLevel: 'error' | 'debug' | 'off' = workspace.getConfiguration('jupyterhub').get('log', 'error');
+let loggingLevel: 'error' | 'debug' | 'off' | 'warn' = workspace.getConfiguration('jupyterhub').get('log', 'error');
 
 disposableStore.add(
     workspace.onDidChangeConfiguration((e) => {
@@ -23,6 +23,13 @@ disposableStore.add(
     })
 );
 
+export function traceWarn(..._args: unknown[]): void {
+    if (loggingLevel === 'off') {
+        return;
+    }
+    logMessage('warn', ..._args);
+}
+
 export function traceError(..._args: unknown[]): void {
     if (loggingLevel === 'off') {
         return;
@@ -37,7 +44,7 @@ export function traceDebug(_message: string, ..._args: unknown[]): void {
     logMessage('debug', ..._args);
 }
 
-function logMessage(level: 'error' | 'debug', ...data: unknown[]) {
+function logMessage(level: 'error' | 'debug' | 'warn', ...data: unknown[]) {
     outputChannel.appendLine(`${getTimeForLogging()} [${level}] ${formatErrors(...data).join(' ')}`);
 }
 

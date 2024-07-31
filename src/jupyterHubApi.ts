@@ -4,36 +4,78 @@
 import { CancellationToken, workspace } from 'vscode';
 import { SimpleFetch } from './common/request';
 import { ServerConnection } from '@jupyterlab/services';
-import { traceDebug, traceError } from './common/logging';
+import { traceDebug, traceError, traceWarn } from './common/logging';
 import { appendUrlPath } from './utils';
 import { noop } from './common/utils';
 import { trackUsageOfOldApiGeneration } from './common/telemetry';
 
 export namespace ApiTypes {
+    /**
+     * https://jupyterhub.readthedocs.io/en/stable/reference/rest-api.html#operation/get-user
+     */
     export interface UserInfo {
-        server: string;
+        /**
+         * The user's notebook server's base URL, if running; null if not.
+         */
+        server?: string;
         last_activity: Date;
         roles: string[];
         groups: string[];
         name: string;
         admin: boolean;
-        pending: null | 'spawn';
-        servers: Record<
-            string,
-            {
-                name: string;
-                last_activity: Date;
-                started: Date;
-                pending: null | 'spawn';
-                ready: boolean;
-                stopped: boolean;
-                url: string;
-                user_options: {};
-                progress_url: string;
-            }
-        >;
-        session_id: string;
-        scopes: string[];
+        pending?: null | 'spawn' | 'stop';
+        /**
+         * The servers for this user. By default: only includes active servers.
+         * Changed in 3.0: if ?include_stopped_servers parameter is specified, stopped servers will be included as well.
+         */
+        servers?: Record<string, ServerInfo>;
+    }
+    export interface ServerInfo {
+        /**
+         * The server's name.
+         * The user's default server has an empty name
+         */
+        name: string;
+        /**
+         * UTC timestamp last-seen activity on this server.
+         */
+        last_activity: Date;
+        /**
+         * UTC timestamp when the server was last started.
+         */
+        started?: Date;
+        /**
+         * The currently pending action, if any.
+         * A server is not ready if an action is pending.
+         */
+        pending?: null | 'spawn' | 'stop';
+        /**
+         * Whether the server is ready for traffic.
+         * Will always be false when any transition is pending.
+         */
+        ready: boolean;
+        /**
+         * Whether the server is stopped.
+         * Added in JupyterHub 3.0,
+         * and only useful when using the ?include_stopped_servers request parameter.
+         * Now that stopped servers may be included (since JupyterHub 3.0),
+         * this is the simplest way to select stopped servers.
+         * Always equivalent to not (ready or pending).
+         */
+        stopped: boolean;
+        /**
+         * The URL path where the server can be accessed (typically /user/:name/:server.name/).
+         * Will be a full URL if subdomains are configured.
+         */
+        url: string;
+        /**
+         * User specified options for the user's spawned instance of a single-user server.
+         */
+        user_options: {};
+        /**
+         * The URL path for an event-stream to retrieve events during a spawn.
+         */
+        progress_url: string;
     }
 }
 
@@ -153,10 +195,14 @@ export async function getUserInfo(
     username: string,
     token: string,
     fetch: SimpleFetch,
-    cancellationToken: CancellationToken
+    cancellationToken: CancellationToken,
+    includeStoppedServers?: boolean
 ): Promise<ApiTypes.UserInfo> {
     traceDebug(`Getting user info for user ${baseUrl}, token length = ${token.length} && ${token.trim().length}`);
-    const url = appendUrlPath(baseUrl, `hub/api/users/${username}`);
+    const path = includeStoppedServers
+        ? `hub/api/users/${username}?include_stopped_servers`
+        : `hub/api/users/${username}`;
+    const url = appendUrlPath(baseUrl, path);
     const headers = { Authorization: `token ${token}` };
     const response = await fetch.send(url, { method: 'GET', headers }, cancellationToken);
     if (response.status === 200) {
@@ -168,29 +214,71 @@ export async function getUserInfo(
 export async function getUserJupyterUrl(
     baseUrl: string,
     username: string,
+    serverName: string | undefined,
     token: string,
     fetch: SimpleFetch,
     cancelToken: CancellationToken
 ) {
-    let usersJupyterUrl = await getUserInfo(baseUrl, username, token, fetch, cancelToken)
-        .then((info) => appendUrlPath(baseUrl, info.server))
-        .catch((ex) => {
-            traceError(`Failed to get the user Jupyter Url`, ex);
-        });
-    if (!usersJupyterUrl) {
-        usersJupyterUrl = appendUrlPath(baseUrl, `user/${username}/`);
+    // If we have a server name, then also get a list of the stopped servers.
+    // Possible the server has been stopped.
+    const includeStoppedServers = !!serverName;
+    const info = await getUserInfo(baseUrl, username, token, fetch, cancelToken, includeStoppedServers);
+    if (serverName) {
+        // Find the server in the list
+        const server = (info.servers || {})[serverName];
+        if (server?.url) {
+            return appendUrlPath(baseUrl, server.url);
+        }
+        const servers = Object.keys(info.servers || {});
+        traceError(
+            `Failed to get the user Jupyter Url for ${serverName} existing servers include ${JSON.stringify(info)}`
+        );
+        throw new Error(
+            `Named Jupyter Server '${serverName}' not found, existing servers include ${servers.join(', ')}`
+        );
+    } else {
+        const defaultServer = (info.servers || {})['']?.url || info.server;
+        if (defaultServer) {
+            return appendUrlPath(baseUrl, defaultServer);
+        }
+        traceError(
+            `Failed to get the user Jupyter Url as there is no default server for the user ${JSON.stringify(info)}`
+        );
+        return appendUrlPath(baseUrl, `user/${username}/`);
     }
-    return usersJupyterUrl;
+}
+
+export async function listServers(
+    baseUrl: string,
+    username: string,
+    token: string,
+    fetch: SimpleFetch,
+    cancelToken: CancellationToken
+) {
+    try {
+        const info = await getUserInfo(baseUrl, username, token, fetch, cancelToken, true).catch((ex) => {
+            traceWarn(`Failed to get user info with stopped servers, defaulting without`, ex);
+            return getUserInfo(baseUrl, username, token, fetch, cancelToken);
+        });
+
+        return Object.values(info.servers || {});
+    } catch (ex) {
+        traceError(`Failed to get a list of servers for the user ${username}`, ex);
+        return [];
+    }
 }
 
 export async function startServer(
     baseUrl: string,
     username: string,
+    serverName: string | undefined,
     token: string,
     fetch: SimpleFetch,
     cancellationToken: CancellationToken
 ): Promise<void> {
-    const url = appendUrlPath(baseUrl, `hub/api/users/${username}/server`);
+    const url = serverName
+        ? appendUrlPath(baseUrl, `hub/api/users/${username}/servers/${encodeURIComponent(serverName)}`)
+        : appendUrlPath(baseUrl, `hub/api/users/${username}/server`);
     const headers = { Authorization: `token ${token}` };
     const response = await fetch.send(url, { method: 'POST', headers }, cancellationToken);
     if (response.status === 201 || response.status === 202) {
@@ -213,6 +301,7 @@ async function getResponseErrorMessageToThrowOrLog(message: string, response?: R
 
 export async function createServerConnectSettings(
     baseUrl: string,
+    serverName: string | undefined,
     authInfo: {
         username: string;
         token: string;
@@ -220,7 +309,7 @@ export async function createServerConnectSettings(
     fetch: SimpleFetch,
     cancelToken: CancellationToken
 ): Promise<ServerConnection.ISettings> {
-    baseUrl = await getUserJupyterUrl(baseUrl, authInfo.username, authInfo.token, fetch, cancelToken);
+    baseUrl = await getUserJupyterUrl(baseUrl, authInfo.username, serverName, authInfo.token, fetch, cancelToken);
     let serverSettings: Partial<ServerConnection.ISettings> = {
         baseUrl,
         appUrl: '',
