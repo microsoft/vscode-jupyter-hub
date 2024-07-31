@@ -10,6 +10,7 @@ import type {
     JupyterServer,
     JupyterServerCommand,
     JupyterServerCommandProvider,
+    JupyterServerConnectionInformation,
     JupyterServerProvider
 } from '@vscode/jupyter-extension';
 import { Localized } from './common/localize';
@@ -273,19 +274,40 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
             const newInput = new this.nodeFetchImpl.Request(newUrl, init as any);
             return this.nodeFetchImpl.default(newInput as any, init as any);
         };
+        const headers = {
+            Authorization: `token ${result.token}`
+        };
+
+        const addOurHeaders = (options?: any) => {
+            options = options || {};
+            return {
+                ...options,
+                headers: {
+                    ...(options.headers || {}),
+                    ...headers
+                }
+            };
+        };
+
         class OurWebSocket extends WebSocketIsomorphic {
-            constructor(url: string, protocols?: string | string[]) {
-                super(url.replace(brokenWsUrl, correctWsUrl).replace(brokenWsUrl2, correctWsUrl), protocols);
+            constructor(url: string, protocols?: string | string[], options?: any) {
+                super(
+                    url.replace(brokenWsUrl, correctWsUrl).replace(brokenWsUrl2, correctWsUrl),
+                    protocols,
+                    addOurHeaders(options)
+                );
             }
         }
+        const connectionInformation: JupyterServerConnectionInformation = {
+            baseUrl,
+            token: result.token,
+            headers
+        };
+        (connectionInformation as any).fetch = ourFetch;
+        (connectionInformation as any).WebSocket = OurWebSocket;
         return {
             ...server,
-            connectionInformation: {
-                baseUrl,
-                token: result.token,
-                fetch: ourFetch as any,
-                WebSocket: OurWebSocket
-            } as any
+            connectionInformation
         };
     }
 }
