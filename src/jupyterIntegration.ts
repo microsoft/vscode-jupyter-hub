@@ -183,6 +183,7 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
         if (!serverInfo) {
             throw new Error('Server not found');
         }
+        traceDebug(`Server Info for ${server.id} is ${JSON.stringify(serverInfo)}`);
         const authInfo = await this.storage.getCredentials(server.id);
         if (!authInfo) {
             throw new Error(`Server ${server.id} not found`);
@@ -250,6 +251,7 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
 
         // https://github.com/microsoft/vscode-jupyter-hub/issues/53
         const baseUrl = Uri.parse(rawBaseUrl);
+        traceDebug(`Resolved server ${server.id} to ${baseUrl.toString(true)}`);
         const brokenUrl = new this.nodeFetchImpl.Request(baseUrl.toString(true)).url;
         const correctUrl = new this.nodeFetchImpl.Request(rawBaseUrl).url;
         const brokenWsUrl = brokenUrl.replace('http', 'ws');

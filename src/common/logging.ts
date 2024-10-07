@@ -37,7 +37,7 @@ export function traceError(..._args: unknown[]): void {
     logMessage('error', ..._args);
 }
 
-export function traceDebug(_message: string, ..._args: unknown[]): void {
+export function traceDebug(..._args: unknown[]): void {
     if (loggingLevel !== 'debug') {
         return;
     }
