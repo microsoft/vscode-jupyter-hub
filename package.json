@@ -1,7 +1,7 @@
 {
     "name": "jupyter-hub",
     "displayName": "JupyterHub",
-    "version": "2024.10.0",
+    "version": "2024.10.100",
     "description": "Support for connecting to Jupyter Hub in VS Code along with the Jupyter Extension",
     "publisher": "ms-toolsai",
     "preview": true,
