@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 env:
-  NODE_VERSION: 16.14.2
+  NODE_VERSION: 18.15.0
   NPM_VERSION: 8.15.1
   PYTHON_VERSION: '3.10'
 
