@@ -206,7 +206,9 @@ export async function getUserInfo(
     const headers = { Authorization: `token ${token}` };
     const response = await fetch.send(url, { method: 'GET', headers }, cancellationToken);
     if (response.status === 200) {
-        return response.json();
+        const json = await response.json();
+        traceDebug(`Got user info for user ${baseUrl} = ${JSON.stringify(json)}`);
+        return json;
     }
     throw new Error(await getResponseErrorMessageToThrowOrLog(`Failed to get user info`, response));
 }
