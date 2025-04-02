@@ -43,7 +43,7 @@ jobs:
     - run: npm i -g @vscode/vsce
     - run: npm ci
     - run: npm run package
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: 'ms-toolsai-jupyter-hub-insiders.vsix'
         path: 'ms-toolsai-jupyter-hub-insiders.vsix'
