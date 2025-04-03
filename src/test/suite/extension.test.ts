@@ -31,6 +31,7 @@ describe('Authentication', function () {
     before(async function () {
         this.timeout(TIMEOUT);
         const file = Uri.joinPath(workspace.workspaceFolders![0].uri, 'jupyterhub.json');
+        cancellationToken = new CancellationTokenSource();
         await activateHubExtension().then((classes) => {
             RequestCreator = classes.RequestCreator;
         });
@@ -38,7 +39,6 @@ describe('Authentication', function () {
         requestCreator = new RequestCreator();
         fetch = new SimpleFetch(requestCreator);
         authenticator = new Authenticator(fetch);
-        cancellationToken = new CancellationTokenSource();
         validator = new JupyterHubConnectionValidator(fetch);
         const { url, username: user } = JSON.parse(Buffer.from(await workspace.fs.readFile(file)).toString());
         baseUrl = url;

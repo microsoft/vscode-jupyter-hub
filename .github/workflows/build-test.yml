@@ -16,8 +16,8 @@ on:
   workflow_dispatch:
 
 env:
-  NODE_VERSION: 18.15.0
-  NPM_VERSION: 8.15.1
+  NODE_VERSION: 20.18.2
+  NPM_VERSION: 10.8.2
   PYTHON_VERSION: '3.10'
 
 jobs:
@@ -43,7 +43,7 @@ jobs:
     - run: npm i -g @vscode/vsce
     - run: npm ci
     - run: npm run package
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: 'ms-toolsai-jupyter-hub-insiders.vsix'
         path: 'ms-toolsai-jupyter-hub-insiders.vsix'

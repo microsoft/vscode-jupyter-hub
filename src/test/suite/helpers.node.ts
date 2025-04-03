@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import { CI_PYTHON_PATH } from '../constants';
 import * as path from 'path';
 import * as os from 'os';
@@ -37,21 +37,29 @@ function setupTempDir() {
 }
 
 export async function generateJupyberHubToken() {
-    return new Promise<string>((resolve) => {
+    return new Promise<string>((resolve, reject) => {
         try {
-            const proc = spawn(
+            const output = spawnSync(
                 CI_PYTHON_PATH,
-                ['-m', 'jupyterhub', 'token', os.userInfo().username, '--config', configFile],
+                ['-m', 'jupyterhub', 'token', os.userInfo().username, '--log-level', 'ERROR', '--config', configFile],
                 {
                     cwd: TEMP_DIR,
                     env: process.env
                 }
             );
-            proc.stdout.on('data', (data) => {
-                resolve(data.toString().trim());
-            });
+            const token = output.stdout?.toString().trim();
+            if (token) {
+                resolve(token);
+            } else {
+                reject(
+                    new Error(
+                        `Failed to generate JupyterHub token, ${output.error?.name}:${output.error?.message}, ${output.error?.stack}, ${output.stderr}`
+                    )
+                );
+            }
         } catch (ex) {
             console.error('Failed to generate JupyterHub token', ex);
+            reject(ex);
         }
     });
 }
