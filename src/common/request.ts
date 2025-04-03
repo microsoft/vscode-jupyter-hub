@@ -7,6 +7,7 @@ import { Localized } from './localize';
 import { raceCancellationError } from './async';
 import { solveCertificateProblem } from './telemetry';
 import { traceError } from './logging';
+import { isSelfCertsError } from '../validator';
 
 /**
  * Responsible for intercepting connections to a remote server and asking for a password if necessary
@@ -27,7 +28,7 @@ export class SimpleFetch {
             );
         } catch (e) {
             traceError(`Error sending request to ${url}`, e);
-            if (e.message.indexOf('reason: self signed certificate') >= 0) {
+            if (isSelfCertsError(e)) {
                 // Ask user to change setting and possibly try again.
                 const value = await window.showErrorMessage(
                     Localized.jupyterSelfCertFail(e.message),

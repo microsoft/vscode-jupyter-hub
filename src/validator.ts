@@ -356,7 +356,12 @@ function isUnableToGetIssuerCertError(err: Error) {
  * The URI entry box when picking a server. It should ask the user if they want to allow it anyway.
  */
 export function isSelfCertsError(err: Error) {
-    return err.message.indexOf('reason: self signed certificate') >= 0 || isUnableToGetIssuerCertError(err);
+    return (
+        err.message.indexOf('reason: self signed certificate') >= 0 ||
+        err.message.indexOf("is not in the cert's list") >= 0 ||
+        err.message.indexOf('reason: unable to verify the first certificate') >= 0 ||
+        isUnableToGetIssuerCertError(err)
+    );
 }
 
 export async function handleSelfCertsError(message: string): Promise<boolean> {
