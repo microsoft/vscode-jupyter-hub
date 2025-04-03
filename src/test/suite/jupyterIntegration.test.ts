@@ -209,6 +209,11 @@ describe('Jupyter Integration', function () {
             expect(lastRequestInput?.url).to.be.deep.equal('http://localhost:8000/user/joe@bloe%20%28personal%29/');
             const ws = new WebSocket(`${brokenUrl.replace('http', 'ws')}api/kernels`);
             expect(ws.url).to.be.equal('ws://localhost:8000/user/joe@bloe%20%28personal%29/api/kernels');
+            // Wait for this WS to close, else we get these errors showing up else where.
+            await new Promise<void>((resolve) => {
+                ws.addEventListener('close', () => resolve());
+                ws.addEventListener('error', () => resolve());
+            });
         });
     });
 });
