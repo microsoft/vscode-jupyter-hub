@@ -48,6 +48,9 @@
             "outFiles": ["${workspaceFolder}/out/**/*.js", "!${workspaceFolder}/**/node_modules**/*"],
             "preLaunchTask": "Compile",
             "skipFiles": ["<node_internals>/**"],
+            "env": {
+                "CI_PYTHON_PATH": "${workspaceFolder}/.venv/bin/python"
+            },
             "presentation": {
                 "group": "2_tests",
                 "order": 6
