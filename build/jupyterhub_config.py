@@ -5,6 +5,7 @@
 
 # On github actions, the following code fails with the error `OSError: [Errno 6] No such device or address`
 # Usingnode.js on CI we can see the username is `runner`
+# import os
 username = 'runner' #os.getlogin()
 
 c = get_config()  #noqa
