@@ -29,19 +29,14 @@ extends:
       - name: Linux
         vsceTarget: ''
     buildSteps:
-      - script: npm i -g npm@8.15.1
-        displayName: npm 8.15.1
+      - script: npm i -g npm@10.8.2
+        displayName: npm 10.8.2
 
       - script: npm ci
         displayName: npm ci
         env:
           npm_config_build_from_source: true
           VSC_VSCE_TARGET: $(vsceTarget)
-
-      - script: npm run updateBuildNumber
-        displayName: Update build number
-        env:
-          VSC_BUILD_ID: $(Build.BuildNumber)
 
       - script: npm run esbuild-release
         displayName: Build

@@ -83,7 +83,6 @@
         "test:unittests": "mocha --config ./build/.mocha.unittests.js.json ./out/**/*.unit.test.js",
         "lint": "eslint -c .eslintrc.js --ext .ts --ext .tsx src",
         "prettier-fix": "prettier 'src/**/*.ts*' --write && prettier 'build/**/*.js' --write",
-        "updateBuildNumber": "node ./build/updateBuildNumber.js",
         "esbuild-base-node": "esbuild ./src/extension.node.ts --bundle --outfile=dist/extension.node.js --external:vscode --external:node:crypto --format=cjs --platform=node",
         "esbuild-base-web": "esbuild ./src/extension.web.ts --bundle --outfile=dist/extension.web.js --external:vscode --external:node:crypto --format=cjs --target=es2018 --define:global=this",
         "esbuild-test-web": "esbuild ./src/test/suite/index.web.ts --bundle --outfile=dist/test.index.web.js --external:vscode --external:node:crypto --format=cjs --target=es2018 --define:global=this --alias:stream=stream-browserify",
