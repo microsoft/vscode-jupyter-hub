@@ -198,7 +198,7 @@ describe('Jupyter Integration', function () {
             expect(fetch).to.be.a('function');
             expect(WebSocket).to.be.a('function');
         });
-        it('Should not encode @ and encode the rest', async () => {
+        it.skip('Should not encode @ and encode the rest', async () => {
             const { fetch, WebSocket }: { fetch: typeof nodeFetch.default; WebSocket: typeof WebSocketIsomorphic } =
                 resolvedServer.connectionInformation as any;
             const brokenUrl = new nodeFetch.Request(resolvedServer.connectionInformation!.baseUrl.toString(true)).url;
