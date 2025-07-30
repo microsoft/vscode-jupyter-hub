@@ -128,7 +128,7 @@
         "@vscode/dts": "^0.4.0",
         "@vscode/jupyter-extension": "^0.0.7",
         "@vscode/test-electron": "^2.4.1",
-        "@vscode/test-web": "^0.0.62",
+        "@vscode/test-web": "^0.0.71",
         "assert": "^2.1.0",
         "chai": "^4.3.8",
         "chai-as-promised": "^7.1.1",
