@@ -24,6 +24,7 @@ extends:
   template: azure-pipelines/extension/stable.yml@templates
   parameters:
     publishExtension: ${{ parameters.publishExtension }}
+    standardizedVersioning: true
     l10nSourcePaths: ./src
     buildPlatforms:
       - name: Linux
@@ -37,11 +38,6 @@ extends:
         env:
           npm_config_build_from_source: true
           VSC_VSCE_TARGET: $(vsceTarget)
-
-      - script: npm run updateBuildNumber
-        displayName: Update build number
-        env:
-          VSC_BUILD_ID: $(Build.BuildNumber)
 
       - script: npm run esbuild-release
         displayName: Build
