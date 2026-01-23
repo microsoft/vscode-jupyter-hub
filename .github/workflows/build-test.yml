@@ -111,6 +111,7 @@ jobs:
       run: npm i -g npm@${{env.NPM_VERSION}}
     - run: npm i -g @vscode/vsce
     - run: npm ci
+    - run: npx playwright install chromium --with-deps
     - run: npm run esbuild-base-web
     - run: npm run test-compile
     - run: npm run make-extension-pack-for-web-tests
