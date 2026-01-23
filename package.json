@@ -1,5 +1,4 @@
 {
-    "name": "jupyter-hub",
     "displayName": "JupyterHub",
     "version": "2025.8.0",
     "description": "Support for connecting to Jupyter Hub in VS Code along with the Jupyter Extension",
