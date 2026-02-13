@@ -1,8 +1,6 @@
 # Run on a schedule
 trigger: none
 pr: none
-# Do not change this name, it is used by gulp file to generate the build number.
-name: $(Date:yyyyMMdd)_$(Hours)_$(Minutes)_$(Rev:r)
 
 schedules:
   - cron: '0 9 * * 1-5' # 9am UTC, Monday-Friday (2am PDT, after VS Code pre-release builds which is 11pm PDT)
@@ -29,6 +27,7 @@ extends:
   template: azure-pipelines/extension/pre-release.yml@templates
   parameters:
     ghCreateTag: false
+    standardizedVersioning: true
     l10nSourcePaths: ./src
     buildPlatforms:
       - name: Linux
@@ -39,11 +38,6 @@ extends:
 
       - script: npm ci
         displayName: npm ci
-
-      - script: npm run updateBuildNumber
-        displayName: Update build number
-        env:
-          VSC_BUILD_ID: $(Build.BuildNumber)
 
       - script: npm run esbuild-release
         displayName: Build

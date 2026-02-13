@@ -3,8 +3,6 @@ trigger:
     include:
       - main
 pr: none
-# Do not change this name, it is used by gulp file to generate the build number.
-name: $(Date:yyyyMMdd)_$(Hours)_$(Minutes)_$(Rev:r)
 
 parameters:
   - name: publishExtension
@@ -37,11 +35,6 @@ extends:
         env:
           npm_config_build_from_source: true
           VSC_VSCE_TARGET: $(vsceTarget)
-
-      - script: npm run updateBuildNumber
-        displayName: Update build number
-        env:
-          VSC_BUILD_ID: $(Build.BuildNumber)
 
       - script: npm run esbuild-release
         displayName: Build
