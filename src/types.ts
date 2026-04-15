@@ -27,34 +27,52 @@ export type JupyterHubServer = {
     serverName?: string;
 };
 
+export type JupyterHubAuthKind = 'password' | 'token' | 'tmpauth';
+
+export type JupyterHubAuthInfo = {
+    authKind: JupyterHubAuthKind;
+    username: string;
+    password: string;
+    token: string;
+    tokenId: string;
+};
+
+export type JupyterHubResolvedAuthInfo = Pick<JupyterHubAuthInfo, 'authKind' | 'username' | 'token' | 'tokenId'>;
+
+export interface ITmpAuthenticatorBootstrapper {
+    tryBootstrapJupyterHubAuth(
+        baseUrl: string,
+        token: CancellationToken
+    ): Promise<JupyterHubResolvedAuthInfo | undefined>;
+}
+
+export class JupyterHubMissingUsernameError extends Error {
+    constructor() {
+        super('Username is required when using password-based JupyterHub authentication.');
+        this.name = 'JupyterHubMissingUsernameError';
+    }
+}
+
 export interface IJupyterHubServerStorage {
     onDidRemove: Event<JupyterHubServer>;
     all: JupyterHubServer[];
     dispose(): void;
-    getCredentials(serverId: string): Promise<{ username: string; password: string } | undefined>;
-    addServerOrUpdate(server: JupyterHubServer, auth: { username: string; password: string }): Promise<void>;
+    getCredentials(serverId: string): Promise<JupyterHubAuthInfo | undefined>;
+    addServerOrUpdate(server: JupyterHubServer, auth: JupyterHubAuthInfo): Promise<void>;
     removeServer(serverId: string): Promise<void>;
 }
 
 export interface IJupyterHubConnectionValidator {
     validateJupyterUri(
         baseUrl: string,
-        authInfo: {
-            username: string;
-            password: string;
-            token?: string;
-        },
+        authInfo: JupyterHubAuthInfo,
         authenticator: IAuthenticator,
         token: CancellationToken
     ): Promise<void>;
     ensureServerIsRunning(
         baseUrl: string,
         serverName: string | undefined,
-        authInfo: {
-            username: string;
-            password: string;
-            token?: string;
-        },
+        authInfo: JupyterHubAuthInfo,
         authenticator: IAuthenticator,
         token: CancellationToken
     ): Promise<void>;
@@ -64,12 +82,8 @@ export interface IAuthenticator {
     getJupyterAuthInfo(
         options: {
             baseUrl: string;
-            authInfo: {
-                username: string;
-                password: string;
-                token: string;
-            };
+            authInfo: JupyterHubAuthInfo;
         },
         token: CancellationToken
-    ): Promise<{ token: string; tokenId?: string }>;
+    ): Promise<JupyterHubResolvedAuthInfo>;
 }

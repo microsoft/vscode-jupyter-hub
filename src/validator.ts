@@ -15,7 +15,7 @@ import {
 import { raceCancellationError, raceTimeout, sleep } from './common/async';
 import { traceDebug, traceError } from './common/logging';
 import { DisposableStore, dispose } from './common/lifecycle';
-import { IJupyterHubConnectionValidator } from './types';
+import { IJupyterHubConnectionValidator, JupyterHubAuthInfo } from './types';
 import { workspace } from 'vscode';
 import { Localized } from './common/localize';
 import { SimpleFetch } from './common/request';
@@ -31,11 +31,7 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
     constructor(private readonly fetch: SimpleFetch) {}
     async validateJupyterUri(
         baseUrl: string,
-        authInfo: {
-            username: string;
-            password: string;
-            token: string;
-        },
+        authInfo: JupyterHubAuthInfo,
         authenticator: IAuthenticator,
         mainCancel: CancellationToken
     ): Promise<void> {
@@ -73,11 +69,7 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
     async ensureServerIsRunning(
         baseUrl: string,
         serverName: string | undefined,
-        authInfo: {
-            username: string;
-            password: string;
-            token: string;
-        },
+        authInfo: JupyterHubAuthInfo,
         authenticator: IAuthenticator,
         mainCancel: CancellationToken
     ): Promise<void> {
@@ -115,7 +107,7 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
                         const settings = await createServerConnectSettings(
                             baseUrl,
                             serverName,
-                            { username: authInfo.username, token: jupyterAuth.token },
+                            { username: jupyterAuth.username, token: jupyterAuth.token },
                             this.fetch,
                             token
                         );
@@ -168,11 +160,7 @@ export class JupyterHubConnectionValidator implements IJupyterHubConnectionValid
     private async startIfServerNotStarted(
         baseUrl: string,
         serverName: string | undefined,
-        authInfo: {
-            username: string;
-            password: string;
-            token: string;
-        },
+        authInfo: JupyterHubAuthInfo,
         progress: Progress<{
             message?: string | undefined;
             increment?: number | undefined;
