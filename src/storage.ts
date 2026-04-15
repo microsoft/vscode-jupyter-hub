@@ -4,19 +4,37 @@
 import { EventEmitter, Memento, SecretStorage } from 'vscode';
 import { traceError } from './common/logging';
 import { DisposableStore } from './common/lifecycle';
-import { IJupyterHubServerStorage, JupyterHubServer } from './types';
+import { IJupyterHubServerStorage, JupyterHubAuthInfo, JupyterHubAuthKind, JupyterHubServer } from './types';
 
 const serverListStorageKey = 'JupyterHubServers';
 const AuthKeyPrefix = 'JupyterHubServerAuthInfo_';
 function getAuthInfoKey(serverId: string) {
     return `${AuthKeyPrefix}${serverId}`;
 }
-type Credentials = {
-    username: string;
-    password: string; // Required to re-generate the token.
-    token: string; // Generated using Hub REST API, this api token is used for connecting to Jupyter by Jupyter Extension.
-    tokenId: string; // Requried when we want to delete the token using the Hub REST API.
-};
+type Credentials = JupyterHubAuthInfo;
+
+function getAuthKind(auth: Partial<JupyterHubAuthInfo>): JupyterHubAuthKind {
+    if (auth.authKind) {
+        return auth.authKind;
+    }
+    if (auth.password) {
+        return 'password';
+    }
+    if (auth.token) {
+        return 'token';
+    }
+    return 'password';
+}
+
+function normalizeCredentials(auth: Partial<JupyterHubAuthInfo>): Credentials {
+    return {
+        authKind: getAuthKind(auth),
+        username: auth.username || '',
+        password: auth.password || '',
+        token: auth.token || '',
+        tokenId: auth.tokenId || ''
+    };
+}
 
 export class JupyterHubServerStorage implements IJupyterHubServerStorage {
     private disposable = new DisposableStore();
@@ -32,15 +50,13 @@ export class JupyterHubServerStorage implements IJupyterHubServerStorage {
     public get all(): JupyterHubServer[] {
         return this.globalMemento.get<JupyterHubServer[]>(serverListStorageKey, []);
     }
-    public async getCredentials(
-        serverId: string
-    ): Promise<{ username: string; password: string; token: string; tokenId: string } | undefined> {
+    public async getCredentials(serverId: string): Promise<JupyterHubAuthInfo | undefined> {
         try {
             const js = await this.secrets.get(getAuthInfoKey(serverId));
             if (!js) {
                 return;
             }
-            return JSON.parse(js || '') as Credentials;
+            return normalizeCredentials(JSON.parse(js || '') as Partial<Credentials>);
         } catch (ex) {
             traceError(`Failed to extract stored username/password ${serverId}`);
             return;
@@ -48,11 +64,12 @@ export class JupyterHubServerStorage implements IJupyterHubServerStorage {
     }
     public async addServerOrUpdate(
         server: { id: string; baseUrl: string; displayName: string; serverName: string | undefined },
-        auth: { username: string; password: string; token: string; tokenId: string }
+        auth: JupyterHubAuthInfo
     ) {
+        const normalizedAuth = normalizeCredentials(auth);
         await Promise.all([
             this.globalMemento.update(serverListStorageKey, this.all.filter((s) => s.id !== server.id).concat(server)),
-            this.secrets.store(getAuthInfoKey(server.id), JSON.stringify(auth))
+            this.secrets.store(getAuthInfoKey(server.id), JSON.stringify(normalizedAuth))
         ]);
     }
     public async removeServer(serverId: string) {
