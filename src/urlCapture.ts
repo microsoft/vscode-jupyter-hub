@@ -20,7 +20,12 @@ import { JupyterHubConnectionValidator, isSelfCertsError, isSelfCertsExpiredErro
 import { WorkflowInputCapture } from './common/inputCapture';
 import { JupyterHubServerStorage } from './storage';
 import { SimpleFetch } from './common/request';
-import { IAuthenticator } from './types';
+import {
+    IAuthenticator,
+    ITmpAuthenticatorBootstrapper,
+    JupyterHubAuthInfo,
+    JupyterHubMissingUsernameError
+} from './types';
 import { Authenticator } from './authenticator';
 import {
     extractTokenFromUrl,
@@ -30,7 +35,7 @@ import {
     listServers,
     type ApiTypes
 } from './jupyterHubApi';
-import { isWebExtension } from './utils';
+import { appendUrlPath, isWebExtension } from './utils';
 import { sendJupyterHubUrlAdded, sendJupyterHubUrlNotAdded } from './common/telemetry';
 
 export class JupyterHubUrlCapture {
@@ -40,9 +45,10 @@ export class JupyterHubUrlCapture {
     private readonly disposable = new DisposableStore();
     constructor(
         private readonly fetch: SimpleFetch,
-        private readonly storage: JupyterHubServerStorage
+        private readonly storage: JupyterHubServerStorage,
+        private readonly tmpAuthBootstrapper?: ITmpAuthenticatorBootstrapper
     ) {
-        this.newAuthenticator = new Authenticator(fetch);
+        this.newAuthenticator = new Authenticator(fetch, tmpAuthBootstrapper);
         this.jupyterConnection = new JupyterHubConnectionValidator(fetch);
     }
     dispose() {
@@ -81,7 +87,7 @@ export class JupyterHubUrlCapture {
         token: CancellationToken
     ): Promise<JupyterServer | undefined> {
         const state: State = {
-            auth: { username: '', password: '', token: '', tokenId: '' },
+            auth: { authKind: 'password', username: '', password: '', token: '', tokenId: '' },
             baseUrl: '',
             serverName: undefined,
             hubVersion: '',
@@ -94,8 +100,8 @@ export class JupyterHubUrlCapture {
         };
         const steps: MultiStep<Step, State>[] = [
             new GetUrlStep(this.fetch),
+            new GetCredentials(this.tmpAuthBootstrapper),
             new GetUserName(),
-            new GetPassword(this.newAuthenticator),
             new VerifyConnection(this.jupyterConnection, this.newAuthenticator),
             new ServerSelector(this.fetch),
             new GetDisplayName(this.storage)
@@ -110,7 +116,7 @@ export class JupyterHubUrlCapture {
                     const version = await getVersion(state.baseUrl, this.fetch, token);
                     state.hubVersion = version;
                     state.urlWasPrePopulated = true;
-                    nextStep = reasonForCapture === 'captureNewUrl' ? 'Get Username' : 'Get Url';
+                    nextStep = reasonForCapture === 'captureNewUrl' ? 'Get Credentials' : 'Get Url';
                 } catch {
                     validationErrorMessage = Localized.invalidJupyterHubUrl;
                 }
@@ -142,12 +148,7 @@ export class JupyterHubUrlCapture {
                             displayName: state.displayName,
                             serverName: state.serverName
                         },
-                        {
-                            username: state.auth.username,
-                            password: state.auth.password,
-                            token: state.auth.token,
-                            tokenId: state.auth.tokenId
-                        }
+                        state.auth
                     );
                     return {
                         id,
@@ -190,8 +191,8 @@ export class JupyterHubUrlCapture {
 type Step =
     | 'Before'
     | 'Get Url'
+    | 'Get Credentials'
     | 'Get Username'
-    | 'Get Password'
     | 'Verify Connection'
     | 'Server Selector'
     | 'Get Display Name'
@@ -222,12 +223,7 @@ type State = {
     displayName: string;
     baseUrl: string;
     hubVersion: string;
-    auth: {
-        username: string;
-        password: string;
-        token: string;
-        tokenId: string;
-    };
+    auth: JupyterHubAuthInfo;
 };
 
 class GetUrlStep extends DisposableStore implements MultiStep<Step, State> {
@@ -281,7 +277,11 @@ class GetUrlStep extends DisposableStore implements MultiStep<Step, State> {
         state.hubVersion = await getVersion(state.baseUrl, this.fetch, token);
         state.auth.username = state.auth.username || extractUserNameFromUrl(url) || '';
         state.auth.token = state.auth.token || extractTokenFromUrl(url) || '';
-        return 'Get Username';
+        if (state.auth.token) {
+            state.auth.authKind = 'token';
+            return 'Verify Connection';
+        }
+        return 'Get Credentials';
     }
 }
 class GetUserName extends DisposableStore implements MultiStep<Step, State> {
@@ -304,81 +304,77 @@ class GetUserName extends DisposableStore implements MultiStep<Step, State> {
             return;
         }
         state.auth.username = username;
-        return 'Get Password';
+        return 'Verify Connection';
     }
 }
-class GetPassword extends DisposableStore implements MultiStep<Step, State> {
-    step: Step = 'Get Password';
+class GetCredentials extends DisposableStore implements MultiStep<Step, State> {
+    step: Step = 'Get Credentials';
     canNavigateBackToThis = true;
-    constructor(private readonly authenticator: IAuthenticator) {
+    constructor(private readonly tmpAuthBootstrapper?: ITmpAuthenticatorBootstrapper) {
         super();
     }
 
     async run(state: State, token: CancellationToken): Promise<Step | undefined> {
-        // In vscode.dev or the like, username/password auth doesn't work
-        // as JupyterHub doesn't support CORS. So we need to use API tokens.
+        if (state.auth.token && !state.auth.password && !state.errorMessage) {
+            return 'Verify Connection';
+        }
+        if (
+            !isWebExtension() &&
+            this.tmpAuthBootstrapper &&
+            !state.auth.username &&
+            !state.auth.password &&
+            !state.auth.token
+        ) {
+            const bootstrappedAuth = await this.tmpAuthBootstrapper
+                .tryBootstrapJupyterHubAuth(state.baseUrl, token)
+                .catch((ex) => {
+                    if (ex instanceof CancellationError) {
+                        throw ex;
+                    }
+                    traceDebug(`Temporary login bootstrap did not complete for ${state.baseUrl}`, ex);
+                    return undefined;
+                });
+            if (bootstrappedAuth) {
+                state.auth = { ...state.auth, ...bootstrappedAuth, password: '' };
+                return 'Verify Connection';
+            }
+        }
+
         const input = this.add(new WorkflowInputCapture());
-        const moreInfo: QuickInputButton = {
-            iconPath: new ThemeIcon('info'),
-            tooltip: Localized.authMethodApiTokenMoreInfoTooltip
+        const openTokenPage: QuickInputButton = {
+            iconPath: new ThemeIcon('link-external'),
+            tooltip: Localized.openJupyterHubTokenPageTooltip
         };
-        const password = await input.getValue(
+        const validationMessage = state.errorMessage;
+        state.errorMessage = '';
+        const credentials = await input.getValue(
             {
-                title: Localized.capturePasswordTitle,
-                placeholder: Localized.capturePasswordPrompt,
+                title: Localized.captureCredentialsTitle,
+                placeholder: Localized.captureCredentialsPrompt,
                 value: state.auth.password || state.auth.token || extractTokenFromUrl(state.url) || '',
                 password: true,
-                buttons: [moreInfo],
+                validationMessage,
+                buttons: [openTokenPage],
                 onDidTriggerButton: (e) => {
-                    if (e === moreInfo) {
-                        env.openExternal(Uri.parse('https://aka.ms/vscodeJupyterHubApiToken')).then(noop, noop);
+                    if (e === openTokenPage) {
+                        env.openExternal(Uri.parse(appendUrlPath(state.baseUrl, 'hub/token'))).then(noop, noop);
                     }
                 },
                 validateInput: async (value) => {
                     if (!value) {
-                        return Localized.emptyPasswordErrorMessage;
-                    }
-                    try {
-                        state.auth.password = value;
-                        const result = await this.authenticator.getJupyterAuthInfo(
-                            {
-                                baseUrl: state.baseUrl,
-                                authInfo: state.auth
-                            },
-                            token
-                        );
-                        state.auth.token = result.token || '';
-                        state.auth.tokenId = result.tokenId || '';
-                        traceDebug(
-                            `Got an Auth token = ${state.auth.token.length} && ${
-                                state.auth.token.trim().length
-                            }, tokenId = ${state.auth.tokenId.length} && ${state.auth.tokenId.trim().length} for ${
-                                state.baseUrl
-                            }`
-                        );
-                    } catch (err) {
-                        traceError('Failed to get Auth Info', err);
-                        if (err instanceof CancellationError) {
-                            throw err;
-                        } else if (isSelfCertsError(err)) {
-                            // We can skip this for now, as this will get verified again
-                            // First we need to check with user whether to allow insecure connections and untrusted certs.
-                        } else if (isSelfCertsExpiredError(err)) {
-                            // We can skip this for now, as this will get verified again
-                            // First we need to check with user whether to allow insecure connections and untrusted certs.
-                        } else {
-                            traceError(`Failed to validate username and password for ${state.baseUrl}`, err);
-                            return Localized.usernamePasswordAuthFailure;
-                        }
+                        return Localized.emptyCredentialsErrorMessage;
                     }
                 }
             },
             token
         );
-        if (!password) {
+        if (!credentials) {
             return;
         }
-        state.auth.password = password;
+        state.auth.password = credentials;
+        state.auth.authKind = 'password';
+        state.auth.token = '';
+        state.auth.tokenId = '';
         return 'Verify Connection';
     }
 }
@@ -394,11 +390,34 @@ class VerifyConnection extends DisposableStore implements MultiStep<Step, State>
     }
     async run(state: State, token: CancellationToken): Promise<Step | undefined> {
         try {
+            const result = await this.authenticator.getJupyterAuthInfo(
+                {
+                    baseUrl: state.baseUrl,
+                    authInfo: state.auth
+                },
+                token
+            );
+            state.auth = {
+                ...state.auth,
+                authKind: result.authKind,
+                username: result.username,
+                token: result.token || '',
+                tokenId: result.tokenId || '',
+                password: result.authKind === 'password' ? state.auth.password : ''
+            };
+            traceDebug(
+                `Got an Auth token = ${state.auth.token.length} && ${state.auth.token.trim().length}, tokenId = ${
+                    state.auth.tokenId.length
+                } && ${state.auth.tokenId.trim().length} for ${state.baseUrl}`
+            );
             await this.jupyterConnection.validateJupyterUri(state.baseUrl, state.auth, this.authenticator, token);
         } catch (err) {
             traceError('Uri verification error', err);
             if (err instanceof CancellationError) {
                 throw err;
+            } else if (err instanceof JupyterHubMissingUsernameError) {
+                state.errorMessage = Localized.passwordAuthRequiresUserName;
+                return 'Get Username';
             } else if (isSelfCertsError(err)) {
                 state.errorMessage = Localized.jupyterSelfCertFailErrorMessageOnly;
                 return 'Get Url';
@@ -406,8 +425,8 @@ class VerifyConnection extends DisposableStore implements MultiStep<Step, State>
                 state.errorMessage = Localized.jupyterSelfCertExpiredErrorMessageOnly;
                 return 'Get Url';
             } else {
-                state.errorMessage = Localized.usernamePasswordAuthFailure;
-                return 'Get Username';
+                state.errorMessage = Localized.jupyterHubCredentialsAuthFailure;
+                return 'Get Credentials';
             }
         }
         return 'Server Selector';

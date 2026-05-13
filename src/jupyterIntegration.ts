@@ -22,7 +22,7 @@ import { JupyterHubUrlCapture } from './urlCapture';
 import { Authenticator } from './authenticator';
 import { deleteApiToken, getUserJupyterUrl } from './jupyterHubApi';
 import { noop } from './common/utils';
-import { IJupyterHubConnectionValidator } from './types';
+import { IJupyterHubConnectionValidator, ITmpAuthenticatorBootstrapper } from './types';
 import { JupyterHubConnectionValidator } from './validator';
 
 export const UserJupyterServerUriListKey = 'user-jupyter-server-uri-list';
@@ -44,10 +44,11 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
         private readonly jupyterApi: Jupyter,
         private readonly storage: JupyterHubServerStorage,
         private readonly urlCapture: JupyterHubUrlCapture,
-        private readonly nodeFetchImpl: typeof nodeFetch = nodeFetch
+        private readonly nodeFetchImpl: typeof nodeFetch = nodeFetch,
+        tmpAuthBootstrapper?: ITmpAuthenticatorBootstrapper
     ) {
         this.jupyterConnectionValidator = new JupyterHubConnectionValidator(fetch);
-        this.newAuthenticator = new Authenticator(fetch);
+        this.newAuthenticator = new Authenticator(fetch, tmpAuthBootstrapper);
         const collection = this.jupyterApi.createJupyterServerCollection(
             this.id,
             Localized.KernelActionSourceTitle,
@@ -194,8 +195,22 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
             { baseUrl: serverInfo.baseUrl, authInfo },
             cancelToken
         );
+        const resolvedAuthInfo = {
+            ...authInfo,
+            authKind: result.authKind,
+            username: result.username,
+            token: result.token,
+            tokenId: result.tokenId || '',
+            password: result.authKind === 'password' ? authInfo.password : ''
+        };
 
-        if (result.tokenId && authInfo?.token !== result.token) {
+        if (
+            authInfo.authKind !== resolvedAuthInfo.authKind ||
+            authInfo.username !== resolvedAuthInfo.username ||
+            authInfo.password !== resolvedAuthInfo.password ||
+            authInfo.token !== resolvedAuthInfo.token ||
+            authInfo.tokenId !== resolvedAuthInfo.tokenId
+        ) {
             // If we have ended up with a new token, (happens if th old token expired)
             // Then save the updated token information.
             try {
@@ -207,10 +222,7 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
                         serverName: serverInfo.serverName
                     },
                     {
-                        password: authInfo.password || '',
-                        username: authInfo.username || '',
-                        token: result.token,
-                        tokenId: result.tokenId
+                        ...resolvedAuthInfo
                     }
                 );
             } catch (ex) {
@@ -221,12 +233,7 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
         // Validate the uri and auth infor.
         // Else nothing will work when attempting to connect to this server from Jupyter Extension.
         await this.jupyterConnectionValidator
-            .validateJupyterUri(
-                serverInfo.baseUrl,
-                { username: authInfo.username, password: authInfo.password, token: result.token },
-                this.newAuthenticator,
-                cancelToken
-            )
+            .validateJupyterUri(serverInfo.baseUrl, resolvedAuthInfo, this.newAuthenticator, cancelToken)
             .catch(noop);
         // Ensure the server is running.
         // Else nothing will work when attempting to connect to this server from Jupyter Extension.
@@ -234,7 +241,7 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
             .ensureServerIsRunning(
                 serverInfo.baseUrl,
                 serverInfo.serverName,
-                { username: authInfo.username, password: authInfo.password, token: result.token },
+                resolvedAuthInfo,
                 this.newAuthenticator,
                 cancelToken
             )
@@ -242,9 +249,9 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
 
         const rawBaseUrl = await getUserJupyterUrl(
             serverInfo.baseUrl,
-            authInfo.username || '',
+            resolvedAuthInfo.username || '',
             serverInfo.serverName,
-            authInfo.token,
+            resolvedAuthInfo.token,
             this.fetch,
             cancelToken
         );

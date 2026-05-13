@@ -9,6 +9,8 @@ import { appendUrlPath } from './utils';
 import { noop } from './common/utils';
 import { trackUsageOfOldApiGeneration } from './common/telemetry';
 
+type HttpResponseLike = Pick<Response, 'status' | 'statusText' | 'json' | 'text'>;
+
 export namespace ApiTypes {
     /**
      * https://jupyterhub.readthedocs.io/en/stable/reference/rest-api.html#operation/get-user
@@ -29,6 +31,12 @@ export namespace ApiTypes {
          * Changed in 3.0: if ?include_stopped_servers parameter is specified, stopped servers will be included as well.
          */
         servers?: Record<string, ServerInfo>;
+    }
+    export interface CurrentUserInfo extends UserInfo {
+        kind?: 'user' | 'service';
+        token_id?: string | null;
+        session_id?: string | null;
+        scopes?: string[];
     }
     export interface ServerInfo {
         /**
@@ -119,15 +127,46 @@ export async function deleteApiToken(
     await fetch.send(url, options, cancellationToken);
 }
 
+export async function getCurrentUser(
+    baseUrl: string,
+    token: string,
+    fetch: SimpleFetch,
+    cancellationToken: CancellationToken
+): Promise<ApiTypes.CurrentUserInfo> {
+    const url = appendUrlPath(baseUrl, 'hub/api/user');
+    const headers = { Authorization: `token ${token}` };
+    const response = await fetch.send(url, { method: 'GET', headers }, cancellationToken);
+    if (response.status === 200) {
+        const json = await response.json();
+        traceDebug(`Got current user for ${baseUrl} = ${JSON.stringify(json)}`);
+        return json as ApiTypes.CurrentUserInfo;
+    }
+    throw new Error(await getResponseErrorMessageToThrowOrLog(`Failed to get current user`, response));
+}
+
+export async function resolveUserName(
+    baseUrl: string,
+    username: string | undefined,
+    token: string,
+    fetch: SimpleFetch,
+    cancellationToken: CancellationToken
+) {
+    const trimmedUsername = username?.trim();
+    if (trimmedUsername) {
+        return trimmedUsername;
+    }
+    return (await getCurrentUser(baseUrl, token, fetch, cancellationToken)).name;
+}
+
 export async function verifyApiToken(
     baseUrl: string,
-    username: string,
+    _username: string,
     token: string,
     fetch: SimpleFetch,
     cancellationToken: CancellationToken
 ) {
     try {
-        await getUserInfo(baseUrl, username, token, fetch, cancellationToken);
+        await getCurrentUser(baseUrl, token, fetch, cancellationToken);
         return true;
     } catch (ex) {
         // Capture errors, with CORS we can get an error here even if the token is valid.
@@ -143,6 +182,9 @@ export async function generateNewApiToken(
     fetch: SimpleFetch,
     cancellationToken: CancellationToken
 ): Promise<{ token: string; tokenId: string }> {
+    if (!password) {
+        throw new Error('Password is required to generate a new token');
+    }
     let response: Response | undefined;
     try {
         const url = appendUrlPath(baseUrl, `hub/api/users/${username}/tokens`);
@@ -159,6 +201,35 @@ export async function generateNewApiToken(
         traceError(await getResponseErrorMessageToThrowOrLog(`Failed to generate token, trying old way`, response), ex);
         return generateNewApiTokenOldWay(baseUrl, username, password, fetch, cancellationToken);
     }
+}
+
+export async function generateNewApiTokenFromSession(
+    baseUrl: string,
+    username: string,
+    sendRequest: (url: string, options: RequestInit) => Promise<HttpResponseLike>,
+    xsrfToken: string,
+    referer: string
+): Promise<{ token: string; tokenId: string }> {
+    const url = appendUrlPath(baseUrl, `hub/api/users/${username}/tokens`);
+    const headers: Record<string, string> = {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Referer: referer
+    };
+    if (xsrfToken) {
+        headers['X-XSRFToken'] = xsrfToken;
+    }
+    type ResponseType = { user: string; id: string; token: string };
+    const response = await sendRequest(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ note: `Requested by JupyterHub extension in VSCode` })
+    });
+    if (response.status === 201 || response.status === 200) {
+        const json = (await response.json()) as ResponseType;
+        return { token: json.token, tokenId: json.id };
+    }
+    throw new Error(await getResponseErrorMessageToThrowOrLog(`Failed to generate token from session`, response));
 }
 
 /**
@@ -192,16 +263,17 @@ export async function generateNewApiTokenOldWay(
 }
 export async function getUserInfo(
     baseUrl: string,
-    username: string,
+    username: string | undefined,
     token: string,
     fetch: SimpleFetch,
     cancellationToken: CancellationToken,
     includeStoppedServers?: boolean
 ): Promise<ApiTypes.UserInfo> {
+    const resolvedUsername = await resolveUserName(baseUrl, username, token, fetch, cancellationToken);
     traceDebug(`Getting user info for user ${baseUrl}, token length = ${token.length} && ${token.trim().length}`);
     const path = includeStoppedServers
-        ? `hub/api/users/${username}?include_stopped_servers`
-        : `hub/api/users/${username}`;
+        ? `hub/api/users/${resolvedUsername}?include_stopped_servers`
+        : `hub/api/users/${resolvedUsername}`;
     const url = appendUrlPath(baseUrl, path);
     const headers = { Authorization: `token ${token}` };
     const response = await fetch.send(url, { method: 'GET', headers }, cancellationToken);
@@ -215,7 +287,7 @@ export async function getUserInfo(
 
 export async function getUserJupyterUrl(
     baseUrl: string,
-    username: string,
+    username: string | undefined,
     serverName: string | undefined,
     token: string,
     fetch: SimpleFetch,
@@ -246,13 +318,14 @@ export async function getUserJupyterUrl(
         traceError(
             `Failed to get the user Jupyter Url as there is no default server for the user ${JSON.stringify(info)}`
         );
-        return appendUrlPath(baseUrl, `user/${username}/`);
+        const resolvedUsername = await resolveUserName(baseUrl, username, token, fetch, cancelToken);
+        return appendUrlPath(baseUrl, `user/${resolvedUsername}/`);
     }
 }
 
 export async function listServers(
     baseUrl: string,
-    username: string,
+    username: string | undefined,
     token: string,
     fetch: SimpleFetch,
     cancelToken: CancellationToken
@@ -272,15 +345,16 @@ export async function listServers(
 
 export async function startServer(
     baseUrl: string,
-    username: string,
+    username: string | undefined,
     serverName: string | undefined,
     token: string,
     fetch: SimpleFetch,
     cancellationToken: CancellationToken
 ): Promise<void> {
+    const resolvedUsername = await resolveUserName(baseUrl, username, token, fetch, cancellationToken);
     const url = serverName
-        ? appendUrlPath(baseUrl, `hub/api/users/${username}/servers/${encodeURIComponent(serverName)}`)
-        : appendUrlPath(baseUrl, `hub/api/users/${username}/server`);
+        ? appendUrlPath(baseUrl, `hub/api/users/${resolvedUsername}/servers/${encodeURIComponent(serverName)}`)
+        : appendUrlPath(baseUrl, `hub/api/users/${resolvedUsername}/server`);
     const headers = { Authorization: `token ${token}` };
     const response = await fetch.send(url, { method: 'POST', headers }, cancellationToken);
     if (response.status === 201 || response.status === 202) {
@@ -288,7 +362,7 @@ export async function startServer(
     }
     throw new Error(await getResponseErrorMessageToThrowOrLog(`Failed to fetch user info`, response));
 }
-async function getResponseErrorMessageToThrowOrLog(message: string, response?: Response) {
+async function getResponseErrorMessageToThrowOrLog(message: string, response?: HttpResponseLike) {
     if (!response) {
         return message;
     }
@@ -305,7 +379,7 @@ export async function createServerConnectSettings(
     baseUrl: string,
     serverName: string | undefined,
     authInfo: {
-        username: string;
+        username: string | undefined;
         token: string;
     },
     fetch: SimpleFetch,

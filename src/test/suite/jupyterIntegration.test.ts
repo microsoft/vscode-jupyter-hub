@@ -13,7 +13,7 @@ import { DisposableStore } from '../../common/lifecycle';
 import { noop } from '../../common/utils';
 import { SimpleFetch } from '../../common/request';
 import { JupyterHubConnectionValidator } from '../../validator';
-import { type IAuthenticator } from '../../types';
+import { type IAuthenticator, type JupyterHubAuthInfo, type JupyterHubResolvedAuthInfo } from '../../types';
 import { JupyterServerIntegration } from '../../jupyterIntegration';
 import type { JupyterHubServerStorage } from '../../storage';
 import type { Jupyter, JupyterServer } from '@vscode/jupyter-extension';
@@ -100,16 +100,13 @@ describe('Jupyter Integration', function () {
         const url = 'http://localhost:8000';
         let server: JupyterServer;
         let stubbedAuth: sinon.SinonStub<
-            [
-                options: { baseUrl: string; authInfo: { username: string; password: string; token: string } },
-                token: CancellationToken
-            ],
-            Promise<{ token: string; tokenId: string }>
+            [options: { baseUrl: string; authInfo: JupyterHubAuthInfo }, token: CancellationToken],
+            Promise<JupyterHubResolvedAuthInfo>
         >;
         let stubbedValidator: sinon.SinonStub<
             [
                 baseUrl: string,
-                authInfo: { username: string; password: string; token: string },
+                authInfo: JupyterHubAuthInfo,
                 authenticator: IAuthenticator,
                 mainCancel: CancellationToken
             ],
@@ -119,11 +116,7 @@ describe('Jupyter Integration', function () {
             [
                 baseUrl: string,
                 serverName: string | undefined,
-                authInfo: {
-                    username: string;
-                    password: string;
-                    token: string;
-                },
+                authInfo: JupyterHubAuthInfo,
                 authenticator: IAuthenticator,
                 mainCancel: CancellationToken
             ],
@@ -147,6 +140,8 @@ describe('Jupyter Integration', function () {
             when(storage.all).thenReturn([{ id: server.id, baseUrl: url, displayName: server.label }]);
             stubbedAuth = sinon.stub(Authenticator.prototype, 'getJupyterAuthInfo').callsFake(async () => {
                 return {
+                    authKind: 'token',
+                    username: 'joe@bloe (personal)',
                     token: '',
                     tokenId: ''
                 };
@@ -173,6 +168,7 @@ describe('Jupyter Integration', function () {
                     }) as any
             } as any);
             when(storage.getCredentials(server.id)).thenResolve({
+                authKind: 'token',
                 password: '',
                 token: '',
                 tokenId: '',

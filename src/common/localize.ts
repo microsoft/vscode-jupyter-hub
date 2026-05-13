@@ -12,11 +12,16 @@ export namespace Localized {
     export const labelOfCommandToEnterUrl = l10n.t('Enter the URL of the running JupyterHub Server...');
     export const placeholderOfInputBoxToEnterUrl = l10n.t('Enter the URL of the running JupyterHub Server');
     export const titleOfInputBoxToEnterUrl = l10n.t('Enter the URL of the running JupyterHub Server');
-    export const captureUserNameTitle = 'Enter your username';
-    export const captureUserNamePrompt = 'username';
-    export const capturePasswordTitle = 'Enter your password or API token';
-    export const capturePasswordPrompt = 'password or token';
-    export const usernamePasswordAuthFailure = l10n.t('Invalid username or password.');
+    export const captureUserNameTitle = l10n.t('Enter your username');
+    export const captureUserNamePrompt = l10n.t('username');
+    export const captureCredentialsTitle = l10n.t('Enter your password or API token');
+    export const captureCredentialsPrompt = l10n.t('password or token');
+    export const jupyterHubCredentialsAuthFailure = l10n.t(
+        'Unable to authenticate. Verify your password or API token.'
+    );
+    export const passwordAuthRequiresUserName = l10n.t(
+        'Enter a username to sign in with a password, or go back and provide an API token.'
+    );
     export const jupyterSelfCertFail = (errorMessage: string) =>
         l10n.t(
             'The security certificate used by server {0} was not issued by a trusted certificate authority.\r\nThis may indicate an attempt to steal your information.\r\nDo you want to enable the Allow Unauthorized Remote Connection setting for this workspace to allow you to connect?',
@@ -42,6 +47,13 @@ export namespace Localized {
     export const remoteJupyterConnectionFailedWithoutServerWithError = (errorMessage: string) =>
         l10n.t('Connection failure. Verify the server is running and reachable. ({0}).', errorMessage);
     export const emptyUserNameErrorMessage = l10n.t('Username cannot be empty');
-    export const emptyPasswordErrorMessage = l10n.t('Password/API token cannot be empty');
-    export const authMethodApiTokenMoreInfoTooltip = l10n.t('More Info');
+    export const emptyCredentialsErrorMessage = l10n.t('Password/API token cannot be empty');
+    export const openJupyterHubTokenPageTooltip = l10n.t('Open token page');
+
+    // Backward-compatible aliases for older references.
+    export const capturePasswordTitle = captureCredentialsTitle;
+    export const capturePasswordPrompt = captureCredentialsPrompt;
+    export const usernamePasswordAuthFailure = jupyterHubCredentialsAuthFailure;
+    export const emptyPasswordErrorMessage = emptyCredentialsErrorMessage;
+    export const authMethodApiTokenMoreInfoTooltip = openJupyterHubTokenPageTooltip;
 }

@@ -49,7 +49,9 @@ describe('Authentication', function () {
             url,
             undefined,
             {
+                authKind: 'password',
                 password: 'pwd',
+                tokenId: '',
                 username,
                 token
             },
@@ -74,7 +76,7 @@ describe('Authentication', function () {
 
     async function generateToken(password: string) {
         const { token, tokenId } = await authenticator.getJupyterAuthInfo(
-            { baseUrl, authInfo: { username, password, token: '' } },
+            { baseUrl, authInfo: { authKind: 'password', username, password, token: '', tokenId: '' } },
             cancellationToken.token
         );
         expect(token).to.be.a('string').that.is.not.equal('');
@@ -99,7 +101,13 @@ describe('Authentication', function () {
                 const validator = new JupyterHubConnectionValidator(fetch);
                 await validator.validateJupyterUri(
                     baseUrl,
-                    { username, password: password(), token },
+                    {
+                        authKind: title === 'password' ? 'password' : 'token',
+                        username,
+                        password: title === 'password' ? password() : '',
+                        token,
+                        tokenId: ''
+                    },
                     authenticator,
                     cancellationToken.token
                 );
