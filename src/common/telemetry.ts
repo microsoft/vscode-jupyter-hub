@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-import TelemetryReporter from '@vscode/extension-telemetry';
+import { TelemetryReporter } from '@vscode/extension-telemetry';
 import { AppInsightsKey } from './constants';
 import { disposableStore } from './lifecycle';
 import { computeHash } from './crypto';
