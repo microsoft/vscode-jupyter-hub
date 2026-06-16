@@ -102,7 +102,7 @@
     },
     "dependencies": {
         "@jupyterlab/services": "^7.2.4",
-        "@vscode/extension-telemetry": "^0.7.7",
+        "@vscode/extension-telemetry": "^1.5.2",
         "buffer": "^6.0.3",
         "events": "^3.3.0",
         "isomorphic-ws": "^4.0.1",
