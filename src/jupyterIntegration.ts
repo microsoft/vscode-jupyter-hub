@@ -61,6 +61,9 @@ export class JupyterServerIntegration implements JupyterServerProvider, JupyterS
     public dispose() {
         dispose(this.disposables);
     }
+    public notifyServersChanged() {
+        this._onDidChangeServers.fire();
+    }
     public async handleCommand(
         command: JupyterServerCommand & { url?: string },
         token: CancellationToken
