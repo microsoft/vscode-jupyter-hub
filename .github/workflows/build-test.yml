@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
+        uses: styfle/cancel-workflow-action@b173b6ec0100793626c2d9e6b90435061f4fc3e5 # 0.11.0
         with:
           access_token: ${{ github.token }}
 
@@ -33,9 +33,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
     - name: Use Node ${{env.NODE_VERSION}}
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3.9.1
       with:
        node-version: ${{env.NODE_VERSION}}
     - name: Use Npm ${{env.NPM_VERSION}}
@@ -43,7 +43,7 @@ jobs:
     - run: npm i -g @vscode/vsce
     - run: npm ci
     - run: npm run package
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: 'ms-toolsai-jupyter-hub-insiders.vsix'
         path: 'ms-toolsai-jupyter-hub-insiders.vsix'
@@ -52,9 +52,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
     - name: Use Node ${{env.NODE_VERSION}}
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3.9.1
       with:
        node-version: ${{env.NODE_VERSION}}
     - name: Use Npm ${{env.NPM_VERSION}}
@@ -69,13 +69,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
     - name: Use Node ${{env.NODE_VERSION}}
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3.9.1
       with:
        node-version: ${{env.NODE_VERSION}}
     - name: Use Python ${{env.PYTHON_VERSION}}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4.9.1
       with:
        python-version: ${{env.PYTHON_VERSION}}
     - name: Use Npm ${{env.NPM_VERSION}}
@@ -98,13 +98,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
     - name: Use Node ${{env.NODE_VERSION}}
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3.9.1
       with:
        node-version: ${{env.NODE_VERSION}}
     - name: Use Python ${{env.PYTHON_VERSION}}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4.9.1
       with:
        python-version: ${{env.PYTHON_VERSION}}
     - name: Use Npm ${{env.NPM_VERSION}}
