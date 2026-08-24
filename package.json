@@ -46,7 +46,8 @@
     ],
     "activationEvents": [
         "onNotebook:jupyter-notebook",
-        "onNotebook:interactive"
+        "onNotebook:interactive",
+        "onUri"
     ],
     "main": "./dist/extension.node.js",
     "browser": "./dist/extension.web.js",
