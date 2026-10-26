@@ -501,8 +501,9 @@ export function getSuggestedDisplayName(baseUrl: string, serverName: string | un
     const usedNamesSet = new Set(usedNames.map((s) => s.toLowerCase()));
     usedNamesSet.add('localhost');
     usedNamesSet.add('');
-    const isIPAddress = typeof parseInt(new URL(baseUrl).hostname.charAt(0), 10) === 'number';
-    let hostName = isIPAddress ? 'JupyterHub' : new URL(baseUrl).hostname;
+    const hostNameOfUrl = new URL(baseUrl).hostname;
+    const isIPAddress = !isNaN(parseInt(hostNameOfUrl.charAt(0), 10));
+    let hostName = isIPAddress ? 'JupyterHub' : hostNameOfUrl;
     hostName = serverName ? `${hostName} (${serverName})` : hostName;
     if (!isIPAddress && !usedNamesSet.has(hostName.toLowerCase())) {
         return hostName;
