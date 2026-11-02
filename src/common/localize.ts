@@ -44,4 +44,14 @@ export namespace Localized {
     export const emptyUserNameErrorMessage = l10n.t('Username cannot be empty');
     export const emptyPasswordErrorMessage = l10n.t('Password/API token cannot be empty');
     export const authMethodApiTokenMoreInfoTooltip = l10n.t('More Info');
+    export const invalidUriToAddServer = l10n.t('Invalid link, unable to add the JupyterHub server.');
+    export const addServerFromUriConfirm = (url: string) => l10n.t('Add the JupyterHub server {0}?', url);
+    export const addServerFromUriConfirmDetail = l10n.t(
+        'The link contains an API token that will be stored securely and used to connect to this server. Only continue if you trust the source of this link.'
+    );
+    export const addServerFromUriConfirmYes = l10n.t('Add Server');
+    export const addServerFromUriSuccess = (displayName: string) =>
+        l10n.t('Added the JupyterHub server {0}.', displayName);
+    export const addServerFromUriFailure = (url: string) =>
+        l10n.t('Failed to add the JupyterHub server {0}, please verify the URL, username and API token.', url);
 }
