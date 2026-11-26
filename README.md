@@ -1,6 +1,8 @@
 # JupyterHub Extension for Visual Studio Code
 
-A [Visual Studio Code](https://code.visualstudio.com/) [extension](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter) that integrates with the Jupyter Extension allowing user to connect and execute code against kernels running on [JupyterHub](https://jupyter.org/hub).
+A [Visual Studio Code](https://code.visualstudio.com/) [extension](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter) that integrates with the Jupyter Extension allowing users to connect and execute code against kernels running on [JupyterHub](https://jupyter.org/hub).
+
+> Connect to your JupyterHub server and run notebooks directly from VS Code.
 
 ### Quick Start
 -   **Step 1.** Install [VS Code](https://code.visualstudio.com/)
