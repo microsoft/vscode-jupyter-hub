@@ -14,11 +14,5 @@ runs:
         npm_config_build_from_source: true
       shell: bash
 
-    # Run again, as the download of zmq binaries could have failed with 403 errors
-    - run: npm run postinstall
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-      shell: bash
-
     - run: npm run package
       shell: bash
