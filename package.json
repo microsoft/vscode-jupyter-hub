@@ -104,7 +104,6 @@
         "@jupyterlab/services": "^7.2.4",
         "@vscode/extension-telemetry": "^1.5.2",
         "buffer": "^6.0.3",
-        "events": "^3.3.0",
         "isomorphic-ws": "^4.0.1",
         "node-fetch": "^2.6.7",
         "process": "^0.11.10",
@@ -124,7 +123,6 @@
         "@typescript-eslint/eslint-plugin": "^6.2.0",
         "@typescript-eslint/eslint-plugin-tslint": "^6.2.0",
         "@typescript-eslint/parser": "^6.2.0",
-        "@vscode/dts": "^0.4.0",
         "@vscode/jupyter-extension": "^0.0.7",
         "@vscode/test-electron": "^2.4.1",
         "@vscode/test-web": "^0.0.71",
@@ -141,12 +139,10 @@
         "eslint-plugin-no-null": "^1.0.2",
         "eslint-plugin-no-only-tests": "^3.1.0",
         "eslint-plugin-prefer-arrow": "^1.2.3",
-        "eslint-plugin-prettier": "^5.0.0",
         "glob": "^10.5.0",
         "mocha": "^10.2.0",
         "prettier": "^3.0.0",
         "sinon": "^17.0.1",
-        "timers-browserify": "^2.0.12",
         "ts-loader": "^9.4.4",
         "ts-mockito": "^2.6.1",
         "tsconfig-paths-webpack-plugin": "^3.2.0",
@@ -157,9 +153,6 @@
     },
     "devDependenciesComments": {
         "@types/react": "Added to ensure @lumino compiles, @lumino is a dependency of Jupyter Lab npm"
-    },
-    "optionalDependencies": {
-        "fsevents": "^2.3.2"
     },
     "overrides": {
         "serialize-javascript": "7.0.6"
